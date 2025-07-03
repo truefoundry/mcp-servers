@@ -1,0 +1,35 @@
+name: calculator-mcp-server
+type: service
+image:
+  type: build
+  build_spec:
+    type: tfy-python-buildpack
+    command: python main.py
+    python_version: '3.11'
+    requirements_path: requirements.txt
+    build_context_path: ./simple-calculator-mcp
+  build_source:
+    ref: <enter your commit hash here>
+    type: git
+    repo_url: https://github.com/truefoundry/mcp-servers
+    branch_name: main
+  ports:
+  - host: <enter your host here>
+    port: 8000
+    expose: true
+    protocol: TCP
+    app_protocol: http
+replicas: 1
+resources:
+  node:
+    type: node_selector
+    capacity_type: spot
+  cpu_limit: 0.5
+  cpu_request: 0.2
+  memory_limit: 500
+  memory_request: 200
+  ephemeral_storage_limit: 2000
+  ephemeral_storage_request: 1000
+auto_shutdown:
+  wait_time: 900
+workspace_fqn: <enter your workspace_fqn here>

@@ -1,7 +1,6 @@
-# server.py
 from fastmcp import FastMCP
 
-mcp = FastMCP("Demo 🚀")
+mcp = FastMCP("Simple Calculator 🚀")
 
 @mcp.tool
 def add(a: int, b: int) -> int:
@@ -30,4 +29,4 @@ def square(a: int) -> int:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000, path="/mcp")
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000, path="/")
