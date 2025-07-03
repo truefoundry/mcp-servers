@@ -1,0 +1,57 @@
+# Google Calendar MCP Server - Docker Compose Configuration
+# Simple, production-ready setup following Docker best practices
+
+services:
+  calendar-mcp:
+    build: .
+    container_name: calendar-mcp
+    restart: unless-stopped
+    
+    # Environment configuration via .env file
+    env_file: .env
+    
+    # Keep container running for exec commands (stdio mode)
+    command: ["tail", "-f", "/dev/null"]
+    
+    # OAuth credentials and token storage
+    volumes:
+      - ./gcp-oauth.keys.json:/app/gcp-oauth.keys.json:ro
+      - calendar-tokens:/home/nodejs/.config/google-calendar-mcp
+    
+    # Expose ports for HTTP mode and OAuth authentication
+    ports:
+      - "3000:3000"  # HTTP mode MCP server
+      - "3500:3500"  # OAuth authentication
+      - "3501:3501"
+      - "3502:3502"
+      - "3503:3503"
+      - "3504:3504"
+      - "3505:3505"
+    
+    
+    # Resource limits for production stability
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.5"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Health check for HTTP mode (safe for stdio mode too)
+    healthcheck:
+      test: ["CMD-SHELL", "if [ \"$TRANSPORT\" = \"http\" ]; then curl -f http://localhost:${PORT:-3000}/health || exit 1; else exit 0; fi"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Persistent volume for OAuth tokens
+volumes:
+  calendar-tokens:
+    driver: local
