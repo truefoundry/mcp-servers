@@ -1,0 +1,33 @@
+name: atlassian-mcp-server
+type: service
+image:
+  type: build
+  build_spec:
+    type: dockerfile
+    command: mcp-atlassian --transport sse --port 3000 -v
+    dockerfile_path: ./Dockerfile
+    build_context_path: ./
+  build_source:
+    type: local
+env:
+  JIRA_URL: https://your-atlassian-domain.atlassian.net
+  CONFLUENCE_URL: https://your-atlassian-domain.atlassian.net/wiki
+  ATLASSIAN_OAUTH_CLOUD_ID: tfy-secret://truefoundry:atlassian-mcp-server:ATLASSIAN_OAUTH_CLOUD_ID
+ports:
+  - host: your-host.your-domain.com
+    port: 3000
+    expose: true
+    protocol: TCP
+    app_protocol: http
+replicas: 1
+resources:
+  node:
+    type: node_selector
+    capacity_type: on_demand
+  cpu_limit: 0.5
+  cpu_request: 0.1
+  memory_limit: 500
+  memory_request: 200
+  ephemeral_storage_limit: 500
+  ephemeral_storage_request: 500
+workspace_fqn: tfy-usea1-devtest:mcp
