@@ -1,6 +1,6 @@
 # Simple Calculator MCP Server
 
-A Model Context Protocol (MCP) server that provides basic mathematical operations. This can be considered a template to create your custom MCP Server.
+A Model Context Protocol (MCP) server that provides basic mathematical operations. This server demonstrates how to create a custom MCP server using FastMCP with health monitoring capabilities.
 
 ## Quick Start
 
@@ -11,8 +11,10 @@ Please make sure that the inputs and outputs are properly type annotated and hav
 
 ```python
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
-mcp = FastMCP("Simple Calculator 🚀")
+mcp = FastMCP("Simple Calculator 🚀", stateless_http=True)
 
 @mcp.tool
 def add(a: int, b: int) -> int:
@@ -30,7 +32,7 @@ def multiply(a: int, b: int) -> int:
     return a * b
 
 @mcp.tool
-def divide(a: int, b: int) -> int:
+def divide(a: int, b: int) -> float:
     """Divide two numbers"""
     return a / b
 
@@ -39,15 +41,52 @@ def square(a: int) -> int:
     """Square a number"""
     return a * a
 
+# Health endpoint for monitoring
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "OK"})
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000, path="/")
-
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
 ```
 
-### Running Locally
+## Available Tools
 
-#### Run the Server
+The server provides the following mathematical operations:
+
+- `add(a: int, b: int)` - Add two numbers
+- `subtract(a: int, b: int)` - Subtract two numbers  
+- `multiply(a: int, b: int)` - Multiply two numbers
+- `divide(a: int, b: int)` - Divide two numbers (returns float)
+- `square(a: int)` - Square a number
+
+## Health Endpoint
+
+The server includes a health endpoint for monitoring and deployment:
+
+### `/health`
+Simple health check endpoint suitable for load balancers and monitoring systems.
+
+**Example:**
+```bash
+curl http://localhost:8000/health
+```
+
+**Response:**
+```json
+{
+  "status": "OK"
+}
+```
+
+## Running Locally
+
+### Prerequisites
+- Python 3.12+
+- pip or uv for package management
+
+### Installation & Running
+
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -56,29 +95,42 @@ pip install -r requirements.txt
 python main.py
 ```
 
-#### Test the Server
-Run the following command to test the server.
+The server will start on `http://localhost:8000` with the following endpoints:
+- **MCP Protocol**: `http://localhost:8000/mcp/` (Streamable HTTP)
+- **Health Check**: `http://localhost:8000/health`
 
+### Testing the Server
+
+#### Using MCP Inspector
 ```bash
 npx @modelcontextprotocol/inspector
 ```
 
-This spins up a UI that you can use to test the server.
+Enter the URL `http://localhost:8000/mcp/` and click "Connect" to test the server.
 
-Please enter the url (http://localhost:8000) and click on the "Connect" button.
+---
 
-You can now test the server by entering the tool name and the arguments.
+## TrueFoundry Deployment
 
-## Deploying the Server on Truefoundry
-Please replace the following placeholders in the `truefoundry.yaml` file:
+The server can be deployed on TrueFoundry using the included `truefoundry.yaml` configuration.
+
+### Configuration
+Update the following placeholders in `truefoundry.yaml`:
 - `host`: Replace with the pre-configured host for your application. You can read [here](https://docs.truefoundry.com/docs/define-ports-and-domains#endpoint) for more details.
 - `workspace_fqn`: Replace with the workspace_fqn of the server. You can read [here](https://docs.truefoundry.com/docs/key-concepts#fqn) for more details.
-
+- `commit_hash`: Replace with the commit hash of the latest main branch.
 
 
 You can deploy the server on Truefoundry by running the following command (Please make sure you have [Truefoundry CLI](https://docs.truefoundry.com/docs/setup-cli) installed on your machine):
 
+### Deploy
 ```bash
+# Install TrueFoundry CLI (if not already installed)
+pip install truefoundry
+
+tfy login --host <host>
+
+# Deploy the server
 tfy apply -f truefoundry.yaml
 ```
 

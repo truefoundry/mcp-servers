@@ -9,12 +9,12 @@ image:
     requirements_path: requirements.txt
     build_context_path: ./simple-calculator-mcp
   build_source:
-    ref: <enter your commit hash here>
+    ref: <commit_hash>
     type: git
     repo_url: https://github.com/truefoundry/mcp-servers
     branch_name: main
-  ports:
-  - host: <enter your host here>
+ports:
+  - host: <host>
     port: 8000
     expose: true
     protocol: TCP
@@ -32,4 +32,25 @@ resources:
   ephemeral_storage_request: 1000
 auto_shutdown:
   wait_time: 900
-workspace_fqn: <enter your workspace_fqn here>
+workspace_fqn: <workspace_fqn>
+liveness_probe:
+  config:
+    path: /health
+    port: 8000
+    type: http
+  period_seconds: 10
+  timeout_seconds: 1
+  failure_threshold: 3
+  success_threshold: 1
+  initial_delay_seconds: 0
+readiness_probe:
+  config:
+    path: /health
+    port: 8000
+    type: http
+  period_seconds: 10
+  timeout_seconds: 1
+  failure_threshold: 3
+  success_threshold: 1
+  initial_delay_seconds: 0
+allow_interception: false
