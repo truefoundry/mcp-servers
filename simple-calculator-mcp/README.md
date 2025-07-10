@@ -96,7 +96,7 @@ python main.py
 ```
 
 The server will start on `http://localhost:8000` with the following endpoints:
-- **MCP Protocol**: `http://localhost:8000/mcp` (WebSocket/HTTP)
+- **MCP Protocol**: `http://localhost:8000/mcp` (Streamable HTTP)
 - **Health Check**: `http://localhost:8000/health`
 
 ### Testing the Server
