@@ -672,6 +672,36 @@ We welcome contributions to MCP Atlassian! If you'd like to contribute:
 
 We use pre-commit hooks for code quality and follow semantic versioning for releases.
 
+## TrueFoundry Deployment
+
+The server can be deployed on TrueFoundry using the included `truefoundry.yaml` configuration.
+
+### Configuration
+Update the following placeholders in `truefoundry.yaml`:
+- `<COMMIT_HASH>`: Replace with the commit hash of the version you want to deploy
+- `<JIRA_BASE_URL>`: Replace with your Jira instance URL (e.g., `https://your-company.atlassian.net`)
+- `<CONFLUENCE_BASE_URL>`: Replace with your Confluence instance URL (e.g., `https://your-company.atlassian.net/wiki`)
+- `<ATLASSIAN_OAUTH_CLOUD_ID>`: Replace with your Atlassian Cloud ID.
+- `<SERVICE_HOSTNAME>`: Replace with the pre-configured host for your application. You can read [here](https://docs.truefoundry.com/docs/define-ports-and-domains#endpoint) for more details.
+- `<WORKSPACE_FQN>`: Replace with the workspace_fqn of the server. You can read [here](https://docs.truefoundry.com/docs/key-concepts#fqn) for more details.
+
+### Deploy
+
+You can deploy the server on TrueFoundry by running the following command (Please make sure you have [TrueFoundry CLI](https://docs.truefoundry.com/docs/setup-cli) installed on your machine):
+
+```bash
+# Install TrueFoundry CLI (if not already installed)
+pip install -U "truefoundry"
+
+# Login to TrueFoundry
+tfy login --host <your-truefoundry-host> # e.g. host: https://mytenant.truefoundry.cloud
+
+# Deploy the server
+tfy apply -f truefoundry.yaml
+```
+
+This will deploy the server on TrueFoundry and you can use the server in your applications.
+
 ## License
 
 Licensed under MIT - see [LICENSE](LICENSE) file. This is not an official Atlassian product.
