@@ -1,2 +1,2 @@
-fastmcp>=0.115.14
+fastmcp>=2.10.4
 requests>=2.31.0
