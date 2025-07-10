@@ -4,7 +4,7 @@ image:
   type: build
   build_spec:
     type: dockerfile
-    command: mcp-atlassian --transport streamable-http --port 3000 -vv
+    command: mcp-atlassian --transport streamable-http --port 3000 -v
     dockerfile_path: ./atlassian-mcp/Dockerfile
     build_context_path: ./atlassian-mcp
   build_source:
