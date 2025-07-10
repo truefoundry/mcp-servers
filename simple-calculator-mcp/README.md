@@ -47,7 +47,7 @@ async def health_check(request: Request) -> JSONResponse:
     return JSONResponse({"status": "OK"})
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000, path="/mcp")
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
 ```
 
 ## Available Tools
@@ -96,7 +96,7 @@ python main.py
 ```
 
 The server will start on `http://localhost:8000` with the following endpoints:
-- **MCP Protocol**: `http://localhost:8000/mcp` (Streamable HTTP)
+- **MCP Protocol**: `http://localhost:8000/mcp/` (Streamable HTTP)
 - **Health Check**: `http://localhost:8000/health`
 
 ### Testing the Server
@@ -106,7 +106,7 @@ The server will start on `http://localhost:8000` with the following endpoints:
 npx @modelcontextprotocol/inspector
 ```
 
-Enter the URL `http://localhost:8000/mcp` and click "Connect" to test the server.
+Enter the URL `http://localhost:8000/mcp/` and click "Connect" to test the server.
 
 ---
 
