@@ -3,7 +3,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 
-mcp = FastMCP("Simple Calculator 🚀")
+mcp = FastMCP("Simple Calculator 🚀", stateless_http=True)
 
 @mcp.tool
 def add(a: int, b: int) -> int:
