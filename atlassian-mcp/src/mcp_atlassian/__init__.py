@@ -66,8 +66,8 @@ logger = setup_logging(logging_level, logging_stream)
 )
 @click.option(
     "--path",
-    default="/mcp",
-    help="Path for Streamable HTTP transport (e.g., /mcp).",
+    default="/mcp/",
+    help="Path for Streamable HTTP transport (e.g., /mcp/).",
 )
 @click.option(
     "--confluence-url",
@@ -323,7 +323,7 @@ def main(
             if final_transport == "sse":
                 log_display_path = fastmcp.settings.sse_path or "/sse"
             else:
-                log_display_path = fastmcp.settings.streamable_http_path or "/mcp"
+                log_display_path = fastmcp.settings.streamable_http_path or "/mcp/"
 
         logger.info(
             f"Starting server with {final_transport.upper()} transport on http://{final_host}:{final_port}{log_display_path}"
