@@ -6,13 +6,16 @@ image:
     type: dockerfile
     command: >-
       ./github-mcp-server multi-user --port 8080
-      --toolsets=repos,users,pull_requests,releases
+      --toolsets=repos,users,pull_requests,releases,actions
     dockerfile_path: ./Dockerfile
-    build_context_path: ./
+    build_context_path: ./github-mcp
   build_source:
-    type: local
+    ref: <enter your commit hash here>
+    type: git
+    repo_url: https://github.com/truefoundry/mcp-servers
+    branch_name: main
 ports:
-  - host: your-host.your-domain.com
+  - host: <enter your host here>
     port: 8080
     expose: true
     protocol: TCP
@@ -21,11 +24,13 @@ replicas: 1
 resources:
   node:
     type: node_selector
-    capacity_type: on_demand
-  cpu_limit: 0.5
+    capacity_type: spot
+  cpu_limit: 1
   cpu_request: 0.1
   memory_limit: 500
   memory_request: 200
   ephemeral_storage_limit: 500
   ephemeral_storage_request: 500
+env:
+  GOMAXPROCS: 1
 workspace_fqn: tfy-usea1-devtest:mcp

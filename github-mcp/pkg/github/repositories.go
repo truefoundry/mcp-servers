@@ -471,9 +471,19 @@ func GetFileContents(getClient GetClientFn, t translations.TranslationHelperFunc
 
 			var result interface{}
 			if fileContent != nil {
-				result = fileContent
-			} else {
-				result = dirContent
+				// Clean file content and handle decoding
+				cleanedContent, err := cleanRepositoryContent(fileContent)
+				if err != nil {
+					return nil, fmt.Errorf("failed to clean file content: %w", err)
+				}
+				result = cleanedContent
+			} else if dirContent != nil {
+				// Clean directory content
+				cleanedContents, err := cleanRepositoryContentSlice(dirContent)
+				if err != nil {
+					return nil, fmt.Errorf("failed to clean directory content: %w", err)
+				}
+				result = cleanedContents
 			}
 
 			r, err := json.Marshal(result)

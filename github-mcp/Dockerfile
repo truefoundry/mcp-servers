@@ -1,4 +1,4 @@
-FROM golang:1.24.3-alpine AS build
+FROM public.ecr.aws/docker/library/golang:1.24.3-alpine3.21 AS build
 ARG VERSION="dev"
 
 # Set the working directory

@@ -173,18 +173,36 @@ func CreateRelease(getClient GetClientFn, t translations.TranslationHelperFunc) 
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			// Create the release request
-			releaseRequest := &github.RepositoryRelease{
-				TagName:                github.Ptr(tagName),
-				TargetCommitish:        github.Ptr(targetCommitish),
-				Name:                   github.Ptr(name),
-				Body:                   github.Ptr(body),
-				Draft:                  github.Ptr(draft),
-				Prerelease:             github.Ptr(prerelease),
-				DiscussionCategoryName: github.Ptr(discussionCategoryName),
-				GenerateReleaseNotes:   github.Ptr(generateReleaseNotes),
-				MakeLatest:             github.Ptr(makeLatest),
-			}
+					// Create the release request
+		releaseRequest := &github.RepositoryRelease{
+			TagName: github.Ptr(tagName),
+		}
+
+		// Only set optional fields if they're not empty
+		if targetCommitish != "" {
+			releaseRequest.TargetCommitish = github.Ptr(targetCommitish)
+		}
+		if name != "" {
+			releaseRequest.Name = github.Ptr(name)
+		}
+		if body != "" {
+			releaseRequest.Body = github.Ptr(body)
+		}
+		if request.GetArguments()["draft"] != nil {
+			releaseRequest.Draft = github.Ptr(draft)
+		}
+		if request.GetArguments()["prerelease"] != nil {
+			releaseRequest.Prerelease = github.Ptr(prerelease)
+		}
+		if discussionCategoryName != "" {
+			releaseRequest.DiscussionCategoryName = github.Ptr(discussionCategoryName)
+		}
+		if request.GetArguments()["generate_release_notes"] != nil {
+			releaseRequest.GenerateReleaseNotes = github.Ptr(generateReleaseNotes)
+		}
+		if makeLatest != "" {
+			releaseRequest.MakeLatest = github.Ptr(makeLatest)
+		}
 
 			client, err := getClient(ctx)
 			if err != nil {
@@ -655,9 +673,15 @@ func GenerateReleaseNotes(getClient GetClientFn, t translations.TranslationHelpe
 
 			// Create the generate release notes request
 			opts := &github.GenerateNotesOptions{
-				TagName:         tagName,
-				TargetCommitish: github.Ptr(targetCommitish),
-				PreviousTagName: github.Ptr(previousTagName),
+				TagName: tagName,
+			}
+
+			// Only set optional fields if they're not empty
+			if targetCommitish != "" {
+				opts.TargetCommitish = github.Ptr(targetCommitish)
+			}
+			if previousTagName != "" {
+				opts.PreviousTagName = github.Ptr(previousTagName)
 			}
 
 			client, err := getClient(ctx)

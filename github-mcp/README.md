@@ -167,6 +167,7 @@ The following sets of tools are available (all are on by default):
 | `pull_requests`         | Pull request operations (create, merge, review)               |
 | `code_security`         | Code scanning alerts and security features                    |
 | `releases`              | Release-related tools (create, list, update, delete releases) |
+| `actions`               | GitHub Actions workflow and run management tools              |
 | `experiments`           | Experimental features (not considered stable)                 |
 
 #### Specifying Toolsets
@@ -176,12 +177,12 @@ To specify toolsets you want available to the LLM, you can pass an allow-list in
 1. **Using Command Line Argument**:
 
    ```bash
-   github-mcp-server --toolsets repos,issues,pull_requests,code_security
+   github-mcp-server --toolsets repos,issues,pull_requests,actions,code_security
    ```
 
 2. **Using Environment Variable**:
    ```bash
-   GITHUB_TOOLSETS="repos,issues,pull_requests,code_security" ./github-mcp-server
+   GITHUB_TOOLSETS="repos,issues,pull_requests,actions,code_security" ./github-mcp-server
    ```
 
 The environment variable `GITHUB_TOOLSETS` takes precedence over the command line argument if both are provided.
@@ -193,7 +194,7 @@ When using Docker, you can pass the toolsets as environment variables:
 ```bash
 docker run -i --rm \
   -e GITHUB_PERSONAL_ACCESS_TOKEN=<your-token> \
-  -e GITHUB_TOOLSETS="repos,issues,pull_requests,code_security,experiments" \
+  -e GITHUB_TOOLSETS="repos,issues,pull_requests,actions,code_security,experiments" \
   ghcr.io/github/github-mcp-server
 ```
 
@@ -624,6 +625,110 @@ export GITHUB_MCP_TOOL_ADD_ISSUE_COMMENT_DESCRIPTION="an alternative description
   - `tag_name`: The tag name for the release (string, required)
   - `target_commitish`: Specifies the commitish value that will be the target for the release's tag (string, optional)
   - `previous_tag_name`: The name of the previous tag to use as the starting point for the release notes (string, optional)
+
+### Actions
+
+- **list_workflows** - List workflows in a repository
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `page`: Page number for pagination (min 1) (number, optional)
+  - `perPage`: Results per page for pagination (min 1, max 100) (number, optional)
+
+- **list_workflow_runs** - List workflow runs for a specific workflow
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `workflow_id`: The workflow ID or workflow file name (string, required)
+  - `actor`: Returns someone's workflow runs. Use the login for the user who created the workflow run. (string, optional)
+  - `branch`: Returns workflow runs associated with a branch. Use the name of the branch. (string, optional)
+  - `event`: Returns workflow runs for a specific event type (string, optional)
+  - `status`: Returns workflow runs with the check run status (string, optional)
+  - `page`: Page number for pagination (min 1) (number, optional)
+  - `perPage`: Results per page for pagination (min 1, max 100) (number, optional)
+
+- **run_workflow** - Run an Actions workflow by workflow ID or filename
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `workflow_id`: The workflow ID (numeric) or workflow file name (e.g., main.yml, ci.yaml) (string, required)
+  - `ref`: The git reference for the workflow. The reference can be a branch or tag name. (string, required)
+  - `inputs`: Inputs the workflow accepts (object, optional)
+
+- **get_workflow_run** - Get details of a specific workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+
+- **get_workflow_run_logs** - Download logs for a specific workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+
+- **list_workflow_jobs** - List jobs for a specific workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+  - `filter`: Filters jobs by their completed_at timestamp (string, optional)
+  - `page`: Page number for pagination (min 1) (number, optional)
+  - `perPage`: Results per page for pagination (min 1, max 100) (number, optional)
+
+- **get_job_logs** - Download logs for a specific workflow job or efficiently get all failed job logs for a workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `job_id`: The unique identifier of the workflow job (required for single job logs) (number, optional)
+  - `run_id`: Workflow run ID (required when using failed_only) (number, optional)
+  - `failed_only`: When true, gets logs for all failed jobs in run_id (boolean, optional)
+  - `return_content`: Returns actual log content instead of URLs (boolean, optional)
+  - `tail_lines`: Number of lines to return from the end of the log (number, optional)
+
+- **rerun_workflow_run** - Re-run an entire workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+
+- **rerun_failed_jobs** - Re-run only the failed jobs in a workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+
+- **cancel_workflow_run** - Cancel a workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+
+- **list_workflow_run_artifacts** - List artifacts for a workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+  - `page`: Page number for pagination (min 1) (number, optional)
+  - `perPage`: Results per page for pagination (min 1, max 100) (number, optional)
+
+- **download_workflow_run_artifact** - Get download URL for a workflow run artifact
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `artifact_id`: The unique identifier of the artifact (number, required)
+
+- **delete_workflow_run_logs** - Delete logs for a workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
+
+- **get_workflow_run_usage** - Get usage metrics for a workflow run
+
+  - `owner`: Repository owner (string, required)
+  - `repo`: Repository name (string, required)
+  - `run_id`: The unique identifier of the workflow run (number, required)
 
 ### Users
 
