@@ -33,4 +33,4 @@ resources:
   ephemeral_storage_request: 500
 env:
   GOMAXPROCS: 1
-workspace_fqn: tfy-usea1-devtest:mcp
+workspace_fqn: <enter your workspace_fqn here>
