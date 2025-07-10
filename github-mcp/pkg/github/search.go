@@ -12,6 +12,96 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// CleanedCodeSearchResult represents a cleaned version of CodeSearchResult without URL fields
+type CleanedCodeSearchResult struct {
+	Total             *int                 `json:"total_count,omitempty"`
+	IncompleteResults *bool                `json:"incomplete_results,omitempty"`
+	CodeResults       []*CleanedCodeResult `json:"items,omitempty"`
+}
+
+// CleanedCodeResult represents a cleaned version of CodeResult without URL fields
+type CleanedCodeResult struct {
+	Name        *string             `json:"name,omitempty"`
+	Path        *string             `json:"path,omitempty"`
+	SHA         *string             `json:"sha,omitempty"`
+	Repository  *CleanedRepository  `json:"repository,omitempty"`
+	TextMatches []*CleanedTextMatch `json:"text_matches,omitempty"`
+}
+
+// CleanedTextMatch represents a cleaned version of TextMatch without URL fields
+type CleanedTextMatch struct {
+	ObjectType *string         `json:"object_type,omitempty"`
+	Property   *string         `json:"property,omitempty"`
+	Fragment   *string         `json:"fragment,omitempty"`
+	Matches    []*github.Match `json:"matches,omitempty"`
+}
+
+// cleanCodeSearchResult removes URL fields from CodeSearchResult
+func cleanCodeSearchResult(result *github.CodeSearchResult) *CleanedCodeSearchResult {
+	if result == nil {
+		return nil
+	}
+
+	cleaned := &CleanedCodeSearchResult{
+		Total:             result.Total,
+		IncompleteResults: result.IncompleteResults,
+	}
+
+	if result.CodeResults != nil {
+		cleaned.CodeResults = make([]*CleanedCodeResult, len(result.CodeResults))
+		for i, codeResult := range result.CodeResults {
+			cleaned.CodeResults[i] = cleanCodeResult(codeResult)
+		}
+	}
+
+	return cleaned
+}
+
+// cleanCodeResult removes URL fields from CodeResult
+func cleanCodeResult(result *github.CodeResult) *CleanedCodeResult {
+	if result == nil {
+		return nil
+	}
+
+	cleaned := &CleanedCodeResult{
+		Name: result.Name,
+		Path: result.Path,
+		SHA:  result.SHA,
+	}
+
+	if result.Repository != nil {
+		cleaned.Repository = cleanRepositoryForSearch(result.Repository)
+	}
+
+	if result.TextMatches != nil {
+		cleaned.TextMatches = make([]*CleanedTextMatch, len(result.TextMatches))
+		for i, textMatch := range result.TextMatches {
+			cleaned.TextMatches[i] = cleanTextMatch(textMatch)
+		}
+	}
+
+	return cleaned
+}
+
+// cleanTextMatch removes URL fields from TextMatch
+func cleanTextMatch(textMatch *github.TextMatch) *CleanedTextMatch {
+	if textMatch == nil {
+		return nil
+	}
+
+	cleaned := &CleanedTextMatch{
+		ObjectType: textMatch.ObjectType,
+		Property:   textMatch.Property,
+		Fragment:   textMatch.Fragment,
+	}
+
+	if textMatch.Matches != nil {
+		cleaned.Matches = textMatch.Matches
+	}
+
+	return cleaned
+}
+
 // SearchRepositories creates a tool to search for GitHub repositories.
 func SearchRepositories(getClient GetClientFn, t translations.TranslationHelperFunc) (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("search_repositories",
@@ -137,7 +227,9 @@ func SearchCode(getClient GetClientFn, t translations.TranslationHelperFunc) (to
 				return mcp.NewToolResultError(fmt.Sprintf("failed to search code: %s", string(body))), nil
 			}
 
-			r, err := json.Marshal(result)
+			cleanedResult := cleanCodeSearchResult(result)
+
+			r, err := json.Marshal(cleanedResult)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
