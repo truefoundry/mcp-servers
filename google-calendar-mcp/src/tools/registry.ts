@@ -28,16 +28,14 @@ export const ToolSchemas = {
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
       }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
-      .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'.")
-      .optional(),
+      .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'."),
     timeMax: z.string()
       .refine((val) => {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
       }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
-      .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'.")
-      .optional(),
+      .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'."),
     timeZone: z.string().optional().describe(
       "Timezone as IANA Time Zone Database name (e.g., America/Los_Angeles). Takes priority over calendar's default timezone. Only used for timezone-naive datetime strings."
     )
@@ -230,9 +228,9 @@ export const ToolSchemas = {
   
   'get-freebusy': z.object({
     items: z.array(z.object({
-      id: z.string().describe("ID of the calendar or group (use 'primary' for the main calendar)")
+      id: z.string().describe("ID of the calendar or group. Can be a calendar ID (e.g., 'primary', '<email@example.com>') or a group ID. Required.")
     })).describe(
-      "List of calendars and/or groups to query for free/busy information. This field maps directly to the Google Calendar API's 'items' property."
+      "List of calendars and/or groups to query for free/busy information. Each item must have an 'id' field that is a calendar or group ID. This field maps directly to the Google Calendar API's 'items' property. At least one item is required."
     ),
     timeMin: z.string()
       .refine((val) => {
@@ -240,20 +238,22 @@ export const ToolSchemas = {
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
       }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
-      .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'."),
+      .describe("Start time boundary for the query. Must be ISO 8601 format with timezone (e.g., '2024-01-01T00:00:00+05:30', '2024-01-01T00:00:00Z', or '2024-01-01T00:00:00-08:00'). Required."),
     timeMax: z.string()
       .refine((val) => {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
       }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
-      .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'."),
-    timeZone: z.string().optional().describe("Timezone for the query"),
+      .describe("End time boundary for the query. Must be ISO 8601 format with timezone (e.g., '2024-01-01T23:59:59+05:30', '2024-01-01T23:59:59Z', or '2024-01-01T23:59:59-08:00'). Required."),
+    timeZone: z.string().optional().describe(
+      "IANA time zone name (e.g., 'Asia/Kolkata', 'America/Los_Angeles'). Used only if timeMin/timeMax do not include a timezone. Optional."
+    ),
     groupExpansionMax: z.number().int().max(100).optional().describe(
-      "Maximum number of calendars to expand per group (max 100)"
+      "Maximum number of calendars to expand per group (max 100). Optional."
     ),
     calendarExpansionMax: z.number().int().max(50).optional().describe(
-      "Maximum number of calendars to expand (max 50)"
+      "Maximum number of calendars to expand (max 50). Optional."
     )
   }),
   
