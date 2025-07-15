@@ -128,8 +128,10 @@ export class RecurringEventHelpers {
         'displayName',
         'id',
         'optional',
+        'organizer',
         'resource',
-        'responseStatus'
+        'responseStatus',
+        'self'
       ];
       requestBody.attendees = Array.isArray(args.attendees)
         ? args.attendees.map((attendee: any) => {

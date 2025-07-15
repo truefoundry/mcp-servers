@@ -1,0 +1,77 @@
+type: service
+name: google-calendar-mcp
+image:
+  type: build
+  build_source:
+    type: git
+    branch_name: main
+    ref: <COMMIT_HASH>
+    repo_url: https://github.com/truefoundry/mcp-servers
+  build_spec:
+    type: dockerfile
+    dockerfile_path: ./google-calendar-mcp/Dockerfile
+    build_context_path: ./google-calendar-mcp
+    command: node build/index.js
+ports:
+  - host: <SERVICE_HOSTNAME>
+    port: 3000
+    expose: true
+    protocol: TCP
+    app_protocol: http
+env:
+  HOST: 0.0.0.0
+  PORT: '3000'
+  TRANSPORT: http
+  GOOGLE_OAUTH_CREDENTIALS: gcp.json
+replicas: 1
+auto_shutdown:
+  wait_time: 900
+mounts:
+  - data: |-
+      {
+          "installed": {
+              "client_id": "<GOOGLE_CLIENT_ID>",
+              "project_id": "<PROJECT_ID>",
+              "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+              "token_uri": "https://oauth2.googleapis.com/token",
+              "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+              "client_secret": "<GOOGLE_CLIENT_SECRET>",
+              "redirect_uris": [
+                  "<REDIRECT_URI>"
+              ]
+          }
+      }
+    type: string
+    mount_path: /app/gcp.json
+allow_interception: false
+resources:
+  node:
+    type: node_selector
+    capacity_type: spot
+  cpu_request: 0.1
+  cpu_limit: 0.5
+  memory_request: 200
+  memory_limit: 1000
+  ephemeral_storage_request: 500
+  ephemeral_storage_limit: 500
+workspace_fqn: <WORKSPACE_FQN>
+liveness_probe:
+  config:
+    path: /health
+    port: 3000
+    type: http
+  period_seconds: 10
+  timeout_seconds: 1
+  failure_threshold: 3
+  success_threshold: 1
+  initial_delay_seconds: 0
+readiness_probe:
+  config:
+    path: /health
+    port: 3000
+    type: http
+  period_seconds: 10
+  timeout_seconds: 1
+  failure_threshold: 3
+  success_threshold: 1
+  initial_delay_seconds: 0

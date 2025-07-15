@@ -82,11 +82,19 @@ function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string
             'tentative': 'tentative',
             'needsAction': 'pending'
         }[status] || 'unknown';
-        
-        return `${name} (${statusText})`;
-    }).join(", ");
-    
-    return `\nGuests: ${formatted}`;
+        const details: string[] = [];
+        details.push(statusText);
+        if (attendee.organizer) details.push("organizer");
+        if (attendee.self) details.push("self");
+        if (attendee.resource) details.push("resource");
+        if (attendee.optional) details.push("optional");
+        if (attendee.additionalGuests !== undefined) details.push(`+${attendee.additionalGuests} guests`);
+        if (attendee.comment) details.push(`comment: ${attendee.comment}`);
+        if (attendee.id) details.push(`id: ${attendee.id}`);
+        return `- ${name} <${email}> [${details.join(", ")}]`;
+    }).join("\n");
+
+    return `\nAttendees:\n${formatted}`;
 }
 
 /**
