@@ -9,7 +9,7 @@ dependencies = [
     "requests[socks]>=2.31.0",
     "beautifulsoup4>=4.12.3",
     "httpx>=0.28.0",
-    "mcp==1.9.4",
+    "mcp==1.10.0",
     "fastmcp==2.8.0",
     "python-dotenv>=1.0.1",
     "markdownify>=0.11.6",
