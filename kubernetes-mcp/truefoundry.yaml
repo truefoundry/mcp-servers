@@ -12,7 +12,7 @@ image:
     dockerfile_path: ./kubernetes-mcp/Dockerfile
     build_context_path: ./kubernetes-mcp
   build_source:
-    ref: 7f99034bee0329e34e37fd0425297ef03ebda633
+    ref: 11f1c701a79308eb85c5291d181c8d6f89cec932
     type: git
     repo_url: https://github.com/truefoundry/mcp-servers
     branch_name: k8s
