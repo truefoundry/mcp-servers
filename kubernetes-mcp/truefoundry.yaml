@@ -8,12 +8,9 @@ image:
   type: build
   build_spec:
     type: dockerfile
-    command: |-
-      mkdir -p ~/.kube
-              echo "$KUBECONFIG_JSON" > ~/.kube/config
-              kubectl config use-context "$K8S_CONTEXT"
-              kubectl config set-context --current --namespace="$K8S_NAMESPACE"
-              exec npx -y mcp-proxy --port 8000 --host 0.0.0.0 --server stream --debug npx mcp-server-kubernetes
+    command: >-
+      bash /scripts/init.sh && npx -y mcp-proxy --port 8000 --host 0.0.0.0
+      --server stream --debug npx mcp-server-kubernetes
     dockerfile_path: ./kubernetes-mcp/Dockerfile
     build_context_path: ./kubernetes-mcp
   build_source:
@@ -27,6 +24,14 @@ ports:
     expose: true
     protocol: TCP
     app_protocol: http
+mounts:
+  - data: |-
+      mkdir -p ~/.kube
+      echo "$KUBECONFIG_JSON" > ~/.kube/config
+      kubectl config use-context "$K8S_CONTEXT"
+      kubectl config set-context --current --namespace="$K8S_NAMESPACE"
+    type: string
+    mount_path: /scripts/init.sh
 replicas: 1
 resources:
   node:
