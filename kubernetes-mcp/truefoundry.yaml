@@ -8,13 +8,11 @@ image:
   type: build
   build_spec:
     type: dockerfile
-    command: >-
-      bash /scripts/init.sh && npx -y mcp-proxy --port 8000 --host 0.0.0.0
-      --server stream --debug npx mcp-server-kubernetes
+    command: bash /scripts/init.sh
     dockerfile_path: ./kubernetes-mcp/Dockerfile
     build_context_path: ./kubernetes-mcp
   build_source:
-    ref: 0a22a3d20ba69a416d490d83081139f1c3a7ebbf
+    ref: 7f99034bee0329e34e37fd0425297ef03ebda633
     type: git
     repo_url: https://github.com/truefoundry/mcp-servers
     branch_name: k8s
@@ -25,11 +23,17 @@ ports:
     protocol: TCP
     app_protocol: http
 mounts:
-  - data: |-
+  - data: >-
       mkdir -p ~/.kube
+
       echo "$KUBECONFIG_JSON" > ~/.kube/config
+
       kubectl config use-context "$K8S_CONTEXT"
+
       kubectl config set-context --current --namespace="$K8S_NAMESPACE"
+
+      npx -y mcp-proxy --port 8000 --host 0.0.0.0 --server stream --debug npx
+      mcp-server-kubernetes
     type: string
     mount_path: /scripts/init.sh
 replicas: 1
