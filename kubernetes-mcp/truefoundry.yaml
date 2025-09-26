@@ -1,0 +1,36 @@
+env:
+  K8S_CONTEXT: your-context
+  K8S_NAMESPACE: your-namespace
+  KUBECONFIG_JSON: your-kubeconfig-json
+name: k8s-mcp-testing
+type: service
+image:
+  type: build
+  build_spec:
+    type: dockerfile
+    dockerfile_path: ./kubernetes-mcp/Dockerfile
+    build_context_path: ./kubernetes-mcp
+  build_source:
+    ref: 203d27ef77d70eaf93e614d0e43abbf1521cb229
+    type: git
+    repo_url: https://github.com/truefoundry/mcp-servers
+    branch_name: k8s
+ports:
+  - host: k8s-mcp-testing.your-host.your-domain.com
+    port: 8000
+    expose: true
+    protocol: TCP
+    app_protocol: http
+replicas: 1
+resources:
+  node:
+    type: node_selector
+    capacity_type: spot_fallback_on_demand
+  cpu_limit: 0.5
+  cpu_request: 0.5
+  memory_limit: 1000
+  memory_request: 1000
+  ephemeral_storage_limit: 500
+  ephemeral_storage_request: 500
+workspace_fqn: your-workspace_fqn
+allow_interception: false
