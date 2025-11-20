@@ -5,10 +5,11 @@ from mcp.server.auth.middleware.auth_context import get_access_token
 from datetime import datetime
 
 
-# Configure JWT verification against Okta
+# Configure JWT verification
 verifier = JWTVerifier(
     jwks_uri=os.getenv("OAUTH_JWKS_URI"),
     issuer=os.getenv("OAUTH_ISSUER"),
+    audience=os.getenv("OAUTH_AUDIENCE"),
 )
 
 # Initialize FastMCP server with JWT authentication
@@ -17,13 +18,13 @@ mcp = FastMCP("sample-oauth-mcp-server", auth=verifier)
 @mcp.tool()
 def get_me(ctx: Context) -> dict:
     """
-    Get authenticated user information from the verified Okta JWT token.
+    Get authenticated user information from the verified JWT token.
     """    
     claims = get_access_token().claims
     
     return {
         "user_id": claims.get('sub', 'N/A'),
-        "okta_user_id": claims.get('uid'),
+        "uid": claims.get('uid'),
         "issuer": claims.get('iss'),
         "audience": claims.get('aud'),
         "client_id": claims.get('cid'),

@@ -16,6 +16,7 @@ image:
 env:
   OAUTH_JWKS_URI: <OAUTH_JWKS_URI>
   OAUTH_ISSUER: <OAUTH_ISSUER>
+  OAUTH_AUDIENCE: <OAUTH_AUDIENCE>
 ports:
   - host: <host>
     port: 8000
