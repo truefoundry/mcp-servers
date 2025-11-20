@@ -31,7 +31,6 @@ def get_me(ctx: Context) -> dict:
         "scopes": claims.get('scp', claims.get('scope', [])),
         "issued_at": datetime.fromtimestamp(claims['iat']).isoformat() if claims.get('iat') else None,
         "expires_at": datetime.fromtimestamp(claims['exp']).isoformat() if claims.get('exp') else None,
-        "authenticated_at": datetime.fromtimestamp(claims['auth_time']).isoformat() if claims.get('auth_time') else None,
         "token_id": claims.get('jti'),
     }
 
