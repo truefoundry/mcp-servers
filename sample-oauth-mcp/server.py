@@ -14,7 +14,7 @@ token_verifier = JWTVerifier(
 )
 
 # Initialize FastMCP server
-mcp = FastMCP("sample-oauth-mcp-server")
+mcp = FastMCP("sample-oauth-mcp-server", auth=token_verifier)
 
 # Forward .well-known/oauth-authorization-server to the actual OAuth server
 @mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET", "HEAD", "OPTIONS"], include_in_schema=False)
