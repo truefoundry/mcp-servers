@@ -14,10 +14,10 @@ image:
     repo_url: https://github.com/truefoundry/mcp-servers
     branch_name: main
 env:
-  OAUTH_WELL_KNOWN_URL: <OAUTH_WELL_KNOWN_URL>
-  OAUTH_JWKS_URI: <OAUTH_JWKS_URI>
-  OAUTH_ISSUER: <OAUTH_ISSUER>
-  OAUTH_AUDIENCE: <OAUTH_AUDIENCE>
+  OAUTH_WELL_KNOWN_URL: <OAUTH_WELL_KNOWN_URL>  # e.g., https://dev-12345678.okta.com/oauth2/aus123abc/.well-known/oauth-authorization-server
+  OAUTH_JWKS_URI: <OAUTH_JWKS_URI>  # e.g., https://dev-12345678.okta.com/oauth2/aus123abc/v1/keys
+  OAUTH_ISSUER: <OAUTH_ISSUER>  # e.g., https://dev-12345678.okta.com/oauth2/aus123abc
+  OAUTH_AUDIENCE: <OAUTH_AUDIENCE>  # e.g., https://your-mcp-server.example.com
 ports:
   - host: <host>
     port: 8000
