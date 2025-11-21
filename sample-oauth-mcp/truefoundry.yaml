@@ -1,0 +1,61 @@
+name: sample-oauth-mcp-server
+type: service
+image:
+  type: build
+  build_spec:
+    type: tfy-python-buildpack
+    command: python server.py
+    python_version: '3.13'
+    requirements_path: requirements.txt
+    build_context_path: ./sample-oauth-mcp
+  build_source:
+    ref: <commit_hash>
+    type: git
+    repo_url: https://github.com/truefoundry/mcp-servers
+    branch_name: main
+env:
+  OAUTH_WELL_KNOWN_URL: <OAUTH_WELL_KNOWN_URL>
+  OAUTH_JWKS_URI: <OAUTH_JWKS_URI>
+  OAUTH_ISSUER: <OAUTH_ISSUER>
+  OAUTH_AUDIENCE: <OAUTH_AUDIENCE>
+ports:
+  - host: <host>
+    port: 8000
+    expose: true
+    protocol: TCP
+    app_protocol: http
+replicas: 1
+resources:
+  node:
+    type: node_selector
+    capacity_type: spot
+  cpu_limit: 0.5
+  cpu_request: 0.1
+  memory_limit: 500
+  memory_request: 200
+  ephemeral_storage_limit: 2000
+  ephemeral_storage_request: 1000
+auto_shutdown:
+  wait_time: 900
+workspace_fqn: <workspace_fqn>
+liveness_probe:
+  config:
+    path: /health
+    port: 8000
+    type: http
+  period_seconds: 10
+  timeout_seconds: 1
+  failure_threshold: 3
+  success_threshold: 1
+  initial_delay_seconds: 0
+readiness_probe:
+  config:
+    path: /health
+    port: 8000
+    type: http
+  period_seconds: 10
+  timeout_seconds: 1
+  failure_threshold: 3
+  success_threshold: 1
+  initial_delay_seconds: 0
+allow_interception: false
