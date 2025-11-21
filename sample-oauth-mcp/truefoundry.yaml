@@ -14,6 +14,7 @@ image:
     repo_url: https://github.com/truefoundry/mcp-servers
     branch_name: main
 env:
+  OAUTH_WELL_KNOWN_URL: <OAUTH_WELL_KNOWN_URL>
   OAUTH_JWKS_URI: <OAUTH_JWKS_URI>
   OAUTH_ISSUER: <OAUTH_ISSUER>
   OAUTH_AUDIENCE: <OAUTH_AUDIENCE>
