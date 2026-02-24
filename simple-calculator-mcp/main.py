@@ -3,7 +3,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 
-mcp = FastMCP("Simple Calculator",stateless_http=True)
+mcp = FastMCP("Simple Calculator")
 
 @mcp.tool
 def add(a: int, b: int) -> int:
@@ -37,4 +37,4 @@ async def health_check(request: Request) -> JSONResponse:
 
 
 if __name__ == "__main__":
-    mcp.http_app()
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
