@@ -1,0 +1,55 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      # Ensure npm supports OIDC well (Node 20 may ship an older npm)
+      - name: Upgrade npm
+        run: npm i -g npm@latest && npm --version
+
+      # Kill any token-based auth that might exist (repo .npmrc, runner ~/.npmrc, etc.)
+      - name: Ensure no npm token auth is configured
+        run: |
+          rm -f .npmrc || true
+          rm -f ~/.npmrc || true
+          npm config delete //registry.npmjs.org/:_authToken || true
+          npm config delete _authToken || true
+          npm config set registry https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Verify version matches tag
+        run: |
+          PACKAGE_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PACKAGE_VERSION" != "${{ github.event.release.tag_name }}" ]; then
+            echo "Tag ${{ github.event.release.tag_name }} does not match package.json version $PACKAGE_VERSION"
+            exit 1
+          fi
+
+      - name: Publish (OIDC Trusted Publishing)
+        run: npm publish

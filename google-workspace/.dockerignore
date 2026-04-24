@@ -1,0 +1,41 @@
+node_modules
+dist
+.tmp-test
+coverage
+
+.git
+.gitignore
+.gitattributes
+.github
+.cursorignore
+.npmignore
+
+.DS_Store
+*.log
+npm-debug.log
+
+.env
+.env.*
+!.env.example
+
+.vscode
+.idea
+
+# Never ship real Google credentials in the image
+gcp-oauth.keys.json
+tokens.json
+google-tokens.json
+.gcp-saved-tokens.json
+auth.log
+
+# Tests aren't needed in the runtime image
+test
+tsconfig.test.json
+
+# TrueFoundry deploy script (local-only, not part of runtime)
+deploy.py
+truefoundry.yaml
+
+# Upstream docs
+CHANGELOG.md
+eslint.config.js
