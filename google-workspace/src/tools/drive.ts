@@ -9,8 +9,6 @@ import type { ToolDefinition, ToolContext, ToolResult } from '../types.js';
 import { errorResponse } from '../types.js';
 import { escapeDriveQuery, getMimeTypeFromFilename, TEXT_MIME_TYPES } from '../utils.js';
 import { downloadDriveFile, GOOGLE_WORKSPACE_EXPORT_FORMATS } from '../download-file.js';
-import { getSecureTokenPath } from '../auth/utils.js';
-import { SCOPE_ALIASES, SCOPE_PRESETS, resolveOAuthScopes } from '../auth/scopes.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -224,19 +222,6 @@ const RestoreRevisionSchema = z.object({
 const AuthTestFileAccessSchema = z.object({
   fileId: z.string().optional(),
 });
-
-function getGrantedScopesFromAuthClient(ctx: ToolContext): string[] {
-  const scopeRaw = ctx.authClient?.credentials?.scope;
-  if (!scopeRaw || typeof scopeRaw !== 'string') return [];
-  return [...new Set(scopeRaw.split(' ').map((s: string) => s.trim()).filter(Boolean))];
-}
-
-function resolveScopeStatus(ctx: ToolContext): { requestedScopes: string[]; grantedScopes: string[]; missingScopes: string[] } {
-  const requestedScopes = resolveOAuthScopes();
-  const grantedScopes = getGrantedScopesFromAuthClient(ctx);
-  const missingScopes = requestedScopes.filter((s) => !grantedScopes.includes(s));
-  return { requestedScopes, grantedScopes, missingScopes };
-}
 
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -535,16 +520,6 @@ export const toolDefinitions: ToolDefinition[] = [
       },
       required: ["fileId", "revisionId"]
     }
-  },
-  {
-    name: "authGetStatus",
-    description: "Show authentication/token status and scope diagnostics",
-    inputSchema: { type: "object", properties: {} }
-  },
-  {
-    name: "authListScopes",
-    description: "List configured/requested scopes and currently granted scopes",
-    inputSchema: { type: "object", properties: {} }
   },
   {
     name: "authTestFileAccess",
@@ -1690,70 +1665,6 @@ export async function handleTool(
       } catch (err: unknown) {
         return errorResponse(`Failed to restore revision: ${err instanceof Error ? err.message : String(err)}`);
       }
-    }
-
-    case "authGetStatus": {
-      const tokenPath = getSecureTokenPath();
-      const tokenFileExists = existsSync(tokenPath);
-      let scopeStatus: ReturnType<typeof resolveScopeStatus>;
-      try {
-        scopeStatus = resolveScopeStatus(ctx);
-      } catch (e: unknown) {
-        return errorResponse(`Invalid scope configuration: ${e instanceof Error ? e.message : String(e)}`);
-      }
-      const { requestedScopes, grantedScopes, missingScopes } = scopeStatus;
-      const expiryDate = ctx.authClient?.credentials?.expiry_date as number | undefined;
-      const expiresInSec = expiryDate ? Math.floor((expiryDate - Date.now()) / 1000) : null;
-
-      const payload = {
-        tokenFilePath: tokenPath,
-        tokenFileExists,
-        hasAccessToken: !!ctx.authClient?.credentials?.access_token,
-        hasRefreshToken: !!ctx.authClient?.credentials?.refresh_token,
-        expiryDate: expiryDate || null,
-        expiresInSec,
-        requestedScopes,
-        grantedScopes,
-        missingScopes,
-      };
-
-      const status =
-        !tokenFileExists || !payload.hasRefreshToken ? 'needs_reauth' :
-        missingScopes.length > 0 ? 'scope_mismatch' :
-        'ok';
-
-      let text = `Auth status (${status}):\n${JSON.stringify(payload, null, 2)}\n\nSummary: token file ${tokenFileExists ? 'found' : 'missing'}, missing scopes=${missingScopes.length}.`;
-      if (grantedScopes.length === 0 && payload.hasAccessToken) {
-        text += '\nNote: granted scopes may appear empty when the token was loaded from disk. This does not necessarily indicate missing permissions.';
-      }
-
-      return {
-        content: [{ type: 'text', text }],
-        isError: false,
-      };
-    }
-
-    case "authListScopes": {
-      let scopeStatus: ReturnType<typeof resolveScopeStatus>;
-      try {
-        scopeStatus = resolveScopeStatus(ctx);
-      } catch (e: unknown) {
-        return errorResponse(`Invalid scope configuration: ${e instanceof Error ? e.message : String(e)}`);
-      }
-      const { requestedScopes, grantedScopes, missingScopes } = scopeStatus;
-      const presetsResolved = Object.fromEntries(
-        Object.entries(SCOPE_PRESETS).map(([k, v]) => [k, v.map((s) => SCOPE_ALIASES[s] || s)]),
-      );
-
-      let text = `Scopes:\n${JSON.stringify({ requestedScopes, grantedScopes, missingScopes, presets: presetsResolved }, null, 2)}`;
-      if (grantedScopes.length === 0 && !!ctx.authClient?.credentials?.access_token) {
-        text += '\nNote: granted scopes may appear empty when the token was loaded from disk. This does not necessarily indicate missing permissions.';
-      }
-
-      return {
-        content: [{ type: 'text', text }],
-        isError: false,
-      };
     }
 
     case "authTestFileAccess": {

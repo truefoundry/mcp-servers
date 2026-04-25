@@ -24,26 +24,26 @@ A single Node.js service that exposes Google **Drive**, **Docs**, **Sheets**, **
  └──────────────────────────────────────────────┘
 ```
 
-The drive / docs / sheets / slides tool sets are ported verbatim from the upstream [`piotr-agier/google-drive-mcp`](https://github.com/piotr-agier/google-drive-mcp). The calendar tool set is migrated from the local `mcp-servers/google-calendar-mcp` package and rewritten to share the same per-request auth model.
+The drive / docs / sheets / slides tool sets are ported verbatim from the upstream [`piotr-agier/google-drive-mcp`](https://github.com/piotr-agier/google-drive-mcp). The calendar tool set is migrated from the (now removed) `mcp-servers/google-calendar-mcp` package and rewritten to share the same per-request auth model.
 
 ## Architecture
 
 - **One Node process, 5 MCP endpoints.** Each `POST /mcp/<service>` request opens a session bound to a `StreamableHTTPServerTransport`, and the underlying MCP `Server` is created via `createMcpServer({ services: ['<service>'] })` so `tools/list` only returns that one service's tools.
-- **Per-request OAuth.** The TFY Gateway forwards the end-user's Google access token in `Authorization: Bearer …`. The server builds a fresh `OAuth2Client` per request using that token plus the application's `client_id`/`client_secret` loaded once from the mounted `/app/gcp.json`.
-- **Tool annotations.** Every tool definition gets `annotations: { destructiveHint, readOnlyHint, idempotentHint, openWorldHint }` computed from its name prefix (`list/get/read/search/…` → read-only; `create/update/delete/…` → destructive).
+- **Per-request OAuth (multi-tenant).** Every request must carry the end-user's Google access token in `Authorization: Bearer …`. The TFY Gateway runs the OAuth dance with Google and forwards the token. The server has no local OAuth flow, no on-disk token storage, no service-account fallback — credentials live in the gateway.
+- **Tool annotations.** Every tool definition gets `annotations: { destructiveHint, readOnlyHint, idempotentHint, openWorldHint }` computed from its name prefix in `src/annotations.ts`.
 
 ## Repository layout
 
 ```
 src/
-  index.ts                # thin CLI
+  index.ts                # thin CLI (HTTP transport only)
   server.ts               # createMcpServer({ services: [...] }) factory
-  auth-ctx.ts             # per-request OAuth2Client resolution
+  auth-ctx.ts             # per-request OAuth2Client resolution from Bearer token
+  auth/client.ts          # one-time loader for the app's client_id/client_secret
   annotations.ts          # tool annotation classifier
   types.ts                # ToolDefinition, ToolContext, ServiceModule
   utils.ts                # shared helpers (escapeDriveQuery, etc.)
-  auth/                   # OAuth / token / scopes helpers
-  tools/                  # drive|docs|sheets|slides implementations
+  tools/                  # drive | docs | sheets | slides implementations
   services/
     drive/                # wrapper -> tools/drive.ts + annotations
     docs/                 # wrapper -> tools/docs.ts + annotations
@@ -52,7 +52,6 @@ src/
     calendar/             # migrated from google-calendar-mcp (handlers + schemas)
   transports/
     http.ts               # Express app with 5 mounted MCP routes + /health
-    stdio.ts              # stdio transport (all services in one server) for local dev
 Dockerfile
 deploy.py                 # TrueFoundry LocalSource(local_build=False) deploy
 gcp-oauth.keys.example.json
@@ -60,20 +59,26 @@ gcp-oauth.keys.example.json
 
 ## Local development
 
+This server runs over HTTP only. To test locally you need a Google access token (e.g. one minted via `gcloud auth print-access-token` for a project that has the relevant APIs enabled, or one captured from a TFY Gateway session).
+
 ```bash
 npm install
 npm run build
-npm run start -- --transport stdio           # local stdio (all services)
-# or
+
+# Mount your gcp-oauth.keys.json (web client) and start the server.
 GOOGLE_DRIVE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json \
-  npm run start -- --transport http --port 3000
+  npm run start -- --port 3000 --host 127.0.0.1
+
+# In another shell, smoke-test:
+curl -s http://127.0.0.1:3000/health
+
+# Initialize an MCP session against one endpoint (header is required):
+curl -s -X POST http://127.0.0.1:3000/mcp/drive \
+  -H "Authorization: Bearer <google-access-token>" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0.0.0"}}}'
 ```
-
-For stdio, set one of:
-
-- `GOOGLE_DRIVE_OAUTH_CREDENTIALS` + an interactive `npm run auth` run (desktop OAuth).
-- `GOOGLE_APPLICATION_CREDENTIALS` pointing at a service-account JSON.
-- `GOOGLE_DRIVE_MCP_ACCESS_TOKEN` (+ optional refresh token + client ID/secret) to use a pre-obtained OAuth token.
 
 ## Deploying to TrueFoundry
 
@@ -149,8 +154,9 @@ Auth settings are the same for all five:
 
 Applied automatically by `src/annotations.ts` based on the tool name prefix:
 
-- **Destructive** (`destructiveHint: true`): name starts with `delete`, `remove`, `trash`, `replace`, `update`, `move`, `clear`, `revoke`, `archive`, `set`, `insert`, `create`, `append`, `batchUpdate`, `rename`, `share`, `unshare`, `writeFile`, `uploadFile`, `upload`, `apply`, `format`, `add`.
-- **Read-only** (`readOnlyHint: true`): `list`, `get`, `read`, `search`, `find`, `export`, `download`, `count`, `describe`, `preview`, `auth(Get|List|Test…)Status`.
+- **Read-only** (`readOnlyHint: true`): `list`, `get`, `read`, `search`, `find`, `export`, `download`, `count`, `describe`, `preview`.
+- **Additive** (no badge): `create`, `insert`, `add`, `append`, `upload`, `share` — operations that produce new data without overwriting or removing existing data.
+- **Destructive** (`destructiveHint: true`): `delete`, `remove`, `trash`, `replace`, `update`, `move`, `clear`, `revoke`, `archive`, `rename`, `unshare`, `set`, `format`, `apply`, `writeFile`, `batchUpdate`.
 - Conflicts (e.g. `findAndReplaceInDoc` matches both) are resolved via `EXPLICIT_OVERRIDES` in `src/annotations.ts`.
 - All tools get `openWorldHint: true` because they all talk to Google's APIs.
 
@@ -158,7 +164,5 @@ See the full per-tool breakdown with `node scripts/list-tools.mjs` after `npm ru
 
 ## Migrated from
 
-- Upstream `piotr-agier/google-drive-mcp` → `src/tools/*` (drive / docs / sheets / slides) + `src/auth/*` + `src/utils.ts`.
-- Internal `mcp-servers/google-calendar-mcp` → `src/services/calendar/handlers/` + `src/services/calendar/schemas/`.
-
-The old `mcp-servers/google-calendar-mcp` and the stand-alone `google-drive-mcp/` working copy are superseded by this package and should be decommissioned after the new TFY service is verified end-to-end.
+- Upstream `piotr-agier/google-drive-mcp` → `src/tools/*` (drive / docs / sheets / slides).
+- (Removed) internal `mcp-servers/google-calendar-mcp` → `src/services/calendar/handlers/` + `src/services/calendar/schemas/`.

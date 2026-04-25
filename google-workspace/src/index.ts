@@ -2,24 +2,19 @@
 /**
  * Google Workspace MCP Server — CLI entry point.
  *
- * This is a single Node process that exposes Drive, Docs, Sheets, Slides, and
- * Calendar. HTTP transport mounts one MCP server per service at
- * `/mcp/<service>`; stdio transport exposes all services on one MCP server
- * (local dev).
+ * A single Node process that exposes Drive, Docs, Sheets, Slides, and Calendar
+ * over HTTP, with one MCP server mounted per service at `/mcp/<service>`.
+ *
+ * Authentication is multi-tenant: the per-user Google access token must arrive
+ * on the Authorization header (forwarded by the TFY LLM Gateway). There is no
+ * local interactive OAuth flow — credentials are managed by the gateway.
  */
 
-import { AuthServer, initializeOAuth2Client } from './auth.js';
 import { startHttpTransport } from './transports/http.js';
-import { startStdioTransport } from './transports/stdio.js';
 import { VERSION } from './server.js';
-
-// -----------------------------------------------------------------------------
-// CLI ARG PARSING
-// -----------------------------------------------------------------------------
 
 interface CliArgs {
   command: string | undefined;
-  transport: 'stdio' | 'http';
   httpPort: number;
   httpHost: string;
 }
@@ -27,7 +22,6 @@ interface CliArgs {
 function parseCliArgs(): CliArgs {
   const args = process.argv.slice(2);
   let command: string | undefined;
-  let transport: string | undefined;
   let httpPort: string | undefined;
   let httpHost: string | undefined;
 
@@ -39,10 +33,6 @@ function parseCliArgs(): CliArgs {
       continue;
     }
 
-    if (arg === '--transport' && i + 1 < args.length) {
-      transport = args[++i];
-      continue;
-    }
     if (arg === '--port' && i + 1 < args.length) {
       httpPort = args[++i];
       continue;
@@ -58,15 +48,6 @@ function parseCliArgs(): CliArgs {
     }
   }
 
-  const resolvedTransport =
-    transport || process.env.MCP_TRANSPORT || process.env.TRANSPORT || 'stdio';
-  if (resolvedTransport !== 'stdio' && resolvedTransport !== 'http') {
-    console.error(
-      `Invalid transport: ${resolvedTransport}. Must be "stdio" or "http".`,
-    );
-    process.exit(1);
-  }
-
   const resolvedPort = parseInt(
     httpPort || process.env.MCP_HTTP_PORT || process.env.PORT || '3000',
     10,
@@ -80,16 +61,10 @@ function parseCliArgs(): CliArgs {
 
   return {
     command,
-    transport: resolvedTransport,
     httpPort: resolvedPort,
-    httpHost:
-      httpHost || process.env.MCP_HTTP_HOST || process.env.HOST || '127.0.0.1',
+    httpHost: httpHost || process.env.MCP_HTTP_HOST || process.env.HOST || '0.0.0.0',
   };
 }
-
-// -----------------------------------------------------------------------------
-// HELP / VERSION
-// -----------------------------------------------------------------------------
 
 function showHelp(): void {
   console.log(`
@@ -99,17 +74,15 @@ Usage:
   google-workspace-mcp [command] [options]
 
 Commands:
-  auth     Run the authentication flow (stdio local dev only)
-  start    Start the MCP server (default)
+  start    Start the HTTP MCP server (default)
   version  Show version information
   help     Show this help message
 
-Transport Options:
-  --transport <stdio|http>   Transport mode (default: stdio)
+Options:
   --port <number>            HTTP listen port (default: 3000)
-  --host <address>           HTTP bind address (default: 127.0.0.1)
+  --host <address>           HTTP bind address (default: 0.0.0.0)
 
-HTTP endpoints (when --transport http):
+HTTP endpoints:
   /health           Liveness/readiness probe
   /mcp/drive        Google Drive tools
   /mcp/docs         Google Docs tools
@@ -117,11 +90,15 @@ HTTP endpoints (when --transport http):
   /mcp/slides       Google Slides tools
   /mcp/calendar     Google Calendar tools
 
+Authentication:
+  Each request must carry an Authorization: Bearer <google-access-token>
+  header. The TrueFoundry LLM Gateway handles the OAuth flow with Google
+  and forwards the per-user token to this server.
+
 Environment Variables:
-  GOOGLE_DRIVE_OAUTH_CREDENTIALS        Path to OAuth client JSON (default: /app/gcp.json)
-  MCP_TRANSPORT                         Transport mode: stdio or http
-  MCP_HTTP_PORT / PORT                  HTTP listen port
-  MCP_HTTP_HOST / HOST                  HTTP bind address
+  GOOGLE_DRIVE_OAUTH_CREDENTIALS   Path to OAuth client JSON (default: /app/gcp.json)
+  MCP_HTTP_PORT / PORT             HTTP listen port
+  MCP_HTTP_HOST / HOST             HTTP bind address
 `);
 }
 
@@ -129,62 +106,16 @@ function showVersion(): void {
   console.log(`Google Workspace MCP Server v${VERSION}`);
 }
 
-async function runAuthServer(): Promise<void> {
-  try {
-    const oauth2Client = await initializeOAuth2Client();
-    const authServerInstance = new AuthServer(oauth2Client);
-    const success = await authServerInstance.start(true);
-
-    if (!success && !authServerInstance.authCompletedSuccessfully) {
-      const { start, end } = authServerInstance.portRange;
-      console.error(
-        `Authentication failed. Could not start server or validate existing tokens. Check port availability (${start}-${end}) and try again.`,
-      );
-      process.exit(1);
-    } else if (authServerInstance.authCompletedSuccessfully) {
-      console.log('Authentication successful.');
-      process.exit(0);
-    }
-
-    console.log(
-      'Authentication server started. Please complete the authentication in your browser...',
-    );
-
-    const intervalId = setInterval(async () => {
-      if (authServerInstance.authCompletedSuccessfully) {
-        clearInterval(intervalId);
-        await authServerInstance.stop();
-        console.log('Authentication completed successfully!');
-        process.exit(0);
-      }
-    }, 1000);
-  } catch (error) {
-    console.error('Authentication failed:', error);
-    process.exit(1);
-  }
-}
-
-// -----------------------------------------------------------------------------
-// MAIN
-// -----------------------------------------------------------------------------
-
 async function main() {
   const args = parseCliArgs();
 
   switch (args.command) {
-    case 'auth':
-      await runAuthServer();
-      break;
     case 'start':
     case undefined:
-      if (args.transport === 'http') {
-        await startHttpTransport({
-          httpHost: args.httpHost,
-          httpPort: args.httpPort,
-        });
-      } else {
-        await startStdioTransport();
-      }
+      await startHttpTransport({
+        httpHost: args.httpHost,
+        httpPort: args.httpPort,
+      });
       break;
     case 'version':
     case '--version':
@@ -204,11 +135,9 @@ async function main() {
 }
 
 export { main };
-export { _setAuthClientForTesting } from './auth-ctx.js';
 export { createMcpServer, SERVICES, SERVICE_KEYS } from './server.js';
 export { createHttpApp } from './transports/http.js';
 
-// Run the CLI (skip when imported by tests)
 if (!process.env.MCP_TESTING) {
   main().catch((error) => {
     console.error('Fatal error:', error);

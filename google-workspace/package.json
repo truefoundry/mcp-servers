@@ -22,16 +22,13 @@
     "lint:eslint": "eslint src/"
   },
   "dependencies": {
-    "@google-cloud/local-auth": "^3.0.1",
     "@modelcontextprotocol/sdk": "^1.24.0",
     "@types/express": "^5.0.3",
     "express": "^5.1.0",
     "google-auth-library": "^9.15.0",
     "googleapis": "^144.0.0",
     "jszip": "^3.10.1",
-    "open": "^10.2.0",
     "pdf-lib": "^1.17.1",
-    "punycode": "^2.3.1",
     "uuid": "^11.0.3",
     "zod": "^3.25.76",
     "zod-to-json-schema": "^3.23.5"

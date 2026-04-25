@@ -1,8 +1,7 @@
 /**
- * Per-service MCP server factory. Each endpoint in the HTTP transport (or the
- * combined stdio transport for local dev) instantiates a Server via
- * `createMcpServer(serviceKey)` so that ListTools / CallTool only advertise
- * the tools belonging to that service.
+ * Per-service MCP server factory. Each endpoint in the HTTP transport
+ * instantiates a Server via `createMcpServer({ services: [key] })` so that
+ * ListTools / CallTool only advertise the tools belonging to that service.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -161,7 +160,7 @@ export function buildToolContext(authClient: any): ToolContext {
 // ---------------------------------------------------------------------------
 
 export interface CreateMcpServerOptions {
-  /** Pass a single key to expose only that service; omit for stdio which gets everything. */
+  /** Service keys this server exposes. Pass a single key for the per-endpoint HTTP mounts. */
   services: ServiceKey[];
 }
 

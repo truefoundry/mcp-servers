@@ -1,30 +1,24 @@
 /**
- * Per-request auth context shared by all transports.
+ * Per-request auth context.
  *
- * Two distinct paths:
+ * Every incoming MCP request must carry the end-user's Google access token in
+ * the `Authorization: Bearer <token>` header. The Express layer copies it
+ * onto `req.auth.access_token`, the MCP SDK surfaces it as
+ * `extra.authInfo.access_token` in every handler, and we build a fresh
+ * per-request OAuth2Client from it.
  *
- * 1. HTTP transport (TrueFoundry / multi-tenant deployment):
- *    - Each request carries the end-user's Google access token in the
- *      `Authorization: Bearer <token>` header (forwarded by the TFY LLM Gateway).
- *    - The Express layer copies it onto `req.auth.access_token`, the MCP SDK
- *      surfaces it as `extra.authInfo.access_token` in every handler, and we
- *      build a fresh per-request OAuth2Client from it.
- *    - The OAuth client_id / client_secret (the application's, not the user's)
- *      are loaded once at boot from the mounted gcp-oauth.keys.json file.
- *
- * 2. stdio transport (local dev / single-user CLI):
- *    - We fall back to `authenticate()` which uses service accounts,
- *      pre-obtained refresh tokens, or an interactive browser OAuth flow.
- *    - The resulting client is cached at module level for the process lifetime.
+ * The OAuth client_id / client_secret (the application's, not the user's)
+ * are loaded once at boot from the mounted gcp-oauth.keys.json file.
  */
 
 import { OAuth2Client } from 'google-auth-library';
-import { authenticate } from './auth.js';
 import { loadCredentials } from './auth/client.js';
 
 export function log(message: string, data?: unknown): void {
   const timestamp = new Date().toISOString();
-  const line = data ? `[${timestamp}] ${message}: ${JSON.stringify(data)}` : `[${timestamp}] ${message}`;
+  const line = data
+    ? `[${timestamp}] ${message}: ${JSON.stringify(data)}`
+    : `[${timestamp}] ${message}`;
   console.error(line);
 }
 
@@ -64,39 +58,13 @@ export function extractAccessToken(extra: any): string | null {
   return token.trim() || null;
 }
 
-// stdio single-user cache.
-let _stdioAuthClient: any = null;
-let _stdioAuthPromise: Promise<any> | null = null;
-
-export async function getStdioAuthClient(): Promise<any> {
-  if (_stdioAuthClient) return _stdioAuthClient;
-  if (_stdioAuthPromise) {
-    _stdioAuthClient = await _stdioAuthPromise;
-    return _stdioAuthClient;
-  }
-  log('Initializing stdio authentication');
-  _stdioAuthPromise = authenticate();
-  try {
-    _stdioAuthClient = await _stdioAuthPromise;
-    log('stdio authentication complete');
-    return _stdioAuthClient;
-  } finally {
-    _stdioAuthPromise = null;
-  }
-}
-
-export async function resolveAuthClientForRequest(extra: any): Promise<any> {
+export async function resolveAuthClientForRequest(extra: any): Promise<OAuth2Client> {
   const token = extractAccessToken(extra);
-  if (token) {
-    const creds = await getClientCreds();
-    return buildOAuth2ClientFromAccessToken(token, creds);
+  if (!token) {
+    throw new Error(
+      'No access token on request. The MCP server requires an Authorization: Bearer <token> header (forwarded by the TFY LLM Gateway).',
+    );
   }
-  // Fallback: stdio / local dev path. Throws if nothing is configured.
-  return getStdioAuthClient();
-}
-
-/** Inject a fake auth client for testing — bypasses authenticate(). */
-export function _setAuthClientForTesting(client: any): void {
-  _stdioAuthClient = client;
-  _stdioAuthPromise = null;
+  const creds = await getClientCreds();
+  return buildOAuth2ClientFromAccessToken(token, creds);
 }
