@@ -1,4 +1,4 @@
-import type { drive_v3, calendar_v3 } from 'googleapis';
+import type { drive_v3, calendar_v3, gmail_v1 } from 'googleapis';
 import type { google as GoogleApisType } from 'googleapis';
 
 export interface ToolResult {
@@ -31,6 +31,7 @@ export interface ToolContext {
   google: typeof GoogleApisType;
   getDrive: () => drive_v3.Drive;
   getCalendar: () => calendar_v3.Calendar;
+  getGmail: () => gmail_v1.Gmail;
   log: (message: string, data?: any) => void;
   resolvePath: (pathStr: string) => Promise<string>;
   resolveFolderId: (input: string | undefined) => Promise<string>;

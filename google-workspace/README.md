@@ -1,12 +1,12 @@
 # Google Workspace MCP Server
 
-A single Node.js service that exposes Google **Drive**, **Docs**, **Sheets**, **Slides**, and **Calendar** as 5 separate MCP endpoints, each hosted by the same container but advertised as a distinct MCP server in the TrueFoundry LLM Gateway.
+A single Node.js service that exposes Google **Drive**, **Docs**, **Sheets**, **Slides**, **Calendar**, and **Gmail** as 6 separate MCP endpoints, each hosted by the same container but advertised as a distinct MCP server in the TrueFoundry LLM Gateway.
 
 ```text
      TFY LLM Gateway
           │
    ┌──────┴────────┐
-   │  OAuth 2.0    │   (5 separate registrations, one per service,
+   │  OAuth 2.0    │   (6 separate registrations, one per service,
    │  per-service  │    each requesting only the scopes it needs)
    │   scopes      │
    └──────┬────────┘
@@ -21,10 +21,11 @@ A single Node.js service that exposes Google **Drive**, **Docs**, **Sheets**, **
  │  /mcp/sheets    → 20 tools                   │
  │  /mcp/slides    → 21 tools                   │
  │  /mcp/calendar  →  9 tools                   │
+ │  /mcp/gmail     → 18 tools                   │
  └──────────────────────────────────────────────┘
 ```
 
-The drive / docs / sheets / slides tool sets are ported verbatim from the upstream [`piotr-agier/google-drive-mcp`](https://github.com/piotr-agier/google-drive-mcp). The calendar tool set is migrated from the (now removed) `mcp-servers/google-calendar-mcp` package and rewritten to share the same per-request auth model.
+The drive / docs / sheets / slides tool sets are ported verbatim from the upstream [`piotr-agier/google-drive-mcp`](https://github.com/piotr-agier/google-drive-mcp). The calendar tool set is migrated from the (now removed) `mcp-servers/google-calendar-mcp` package. The gmail tool set is ported from [`gongrzhe/server-gmail-autoauth-mcp`](https://github.com/gongrzhe/server-gmail-autoauth-mcp), with attachment support intentionally dropped (see [Gmail notes](#gmail-notes)). All services share the same per-request auth model.
 
 ## Architecture
 
@@ -50,8 +51,9 @@ src/
     sheets/               # wrapper -> tools/sheets.ts + annotations
     slides/               # wrapper -> tools/slides.ts + annotations
     calendar/             # migrated from google-calendar-mcp (handlers + schemas)
+    gmail/                # ported from Gmail-MCP-Server (no attachments)
   transports/
-    http.ts               # Express app with 5 mounted MCP routes + /health
+    http.ts               # Express app with 6 mounted MCP routes + /health
 Dockerfile
 deploy.py                 # TrueFoundry LocalSource(local_build=False) deploy
 gcp-oauth.keys.example.json
@@ -88,7 +90,7 @@ Prerequisites:
    ```
    https://<your-tfy-control-plane>/api/svc/v1/llm-gateway/mcp-servers/oauth2/callback
    ```
-2. Ensure these Google APIs are enabled in your GCP project: Drive, Docs, Sheets, Slides, Calendar.
+2. Ensure these Google APIs are enabled in your GCP project: Drive, Docs, Sheets, Slides, Calendar, Gmail.
 3. `tfy login --host https://<your-tfy-control-plane>`.
 
 Then:
@@ -115,14 +117,14 @@ should return:
   "status": "healthy",
   "server": "google-workspace-mcp",
   "version": "0.1.0",
-  "services": ["drive", "docs", "sheets", "slides", "calendar"],
+  "services": ["drive", "docs", "sheets", "slides", "calendar", "gmail"],
   "timestamp": "…"
 }
 ```
 
 ## Registering MCP servers in the TFY Gateway
 
-Create **5 separate MCP server registrations** in the TrueFoundry LLM Gateway UI. They share the same Google OAuth client, but each requests a different subset of scopes at user-consent time:
+Create **6 separate MCP server registrations** in the TrueFoundry LLM Gateway UI. They share the same Google OAuth client, but each requests a different subset of scopes at user-consent time:
 
 | TFY MCP name          | Server URL                                                                         | Scopes                                                                                                                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -131,8 +133,9 @@ Create **5 separate MCP server registrations** in the TrueFoundry LLM Gateway UI
 | `gws-sheets`          | `https://google-workspace-mcp-a2a-3000.<tfy-domain>/mcp/sheets`                    | `https://www.googleapis.com/auth/spreadsheets` `https://www.googleapis.com/auth/drive.file`                                                                                         |
 | `gws-slides`          | `https://google-workspace-mcp-a2a-3000.<tfy-domain>/mcp/slides`                    | `https://www.googleapis.com/auth/presentations` `https://www.googleapis.com/auth/drive.file`                                                                                        |
 | `gws-calendar`        | `https://google-workspace-mcp-a2a-3000.<tfy-domain>/mcp/calendar`                  | `https://www.googleapis.com/auth/calendar` `https://www.googleapis.com/auth/calendar.events`                                                                                        |
+| `gws-gmail`           | `https://google-workspace-mcp-a2a-3000.<tfy-domain>/mcp/gmail`                     | `https://www.googleapis.com/auth/gmail.modify` `https://www.googleapis.com/auth/gmail.settings.basic`                                                                               |
 
-Auth settings are the same for all five:
+Auth settings are the same for all six:
 
 - **Auth type**: OAuth 2.0
 - **Authorization URL**: `https://accounts.google.com/o/oauth2/v2/auth`
@@ -162,7 +165,21 @@ Applied automatically by `src/annotations.ts` based on the tool name prefix:
 
 See the full per-tool breakdown with `node scripts/list-tools.mjs` after `npm run build`.
 
+## Gmail notes
+
+The gmail service exposes 18 tools (`send_email`, `draft_email`, `read_email`, `search_emails`, `modify_email`, `delete_email`, `list_email_labels`, `batch_modify_emails`, `batch_delete_emails`, `create_label`, `update_label`, `delete_label`, `get_or_create_label`, `create_filter`, `list_filters`, `get_filter`, `delete_filter`, `create_filter_from_template`).
+
+Two upstream features are intentionally absent:
+
+- **`download_attachment` tool** — upstream writes the attachment to a local path, which is meaningless inside this container behind the LLM Gateway.
+- **`attachments` field on `send_email` / `draft_email`** — upstream takes a list of local file paths, which we cannot resolve in a multi-tenant gateway-fronted deployment.
+
+Listing attachment metadata (id, filename, mimeType, size) when calling `read_email` is still supported.
+
+The gmail service requests two scopes: `gmail.modify` (covers reading, sending, modifying, and deleting messages and labels) and `gmail.settings.basic` (required for the filter management tools).
+
 ## Migrated from
 
 - Upstream `piotr-agier/google-drive-mcp` → `src/tools/*` (drive / docs / sheets / slides).
 - (Removed) internal `mcp-servers/google-calendar-mcp` → `src/services/calendar/handlers/` + `src/services/calendar/schemas/`.
+- Upstream `gongrzhe/server-gmail-autoauth-mcp` → `src/services/gmail/` (attachment features dropped, per-request OAuth in place of upstream's local file-based token store).

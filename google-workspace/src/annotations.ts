@@ -81,6 +81,26 @@ const EXPLICIT_OVERRIDES: Record<string, Partial<ToolAnnotations>> = {
     readOnlyHint: false,
     idempotentHint: false,
   },
+  // Gmail tools: name doesn't start with any classifier prefix, so the
+  // heuristic falls back to "destructive". These are additive in practice
+  // (creating a new email/draft/label).
+  send_email: {
+    destructiveHint: false,
+    readOnlyHint: false,
+    idempotentHint: false,
+  },
+  draft_email: {
+    destructiveHint: false,
+    readOnlyHint: false,
+    idempotentHint: false,
+  },
+  // get_or_create_label starts with "get" (read-only prefix) but creates
+  // a label when one isn't found.
+  get_or_create_label: {
+    destructiveHint: false,
+    readOnlyHint: false,
+    idempotentHint: false,
+  },
 };
 
 function startsWithAny(name: string, prefixes: readonly string[]): boolean {

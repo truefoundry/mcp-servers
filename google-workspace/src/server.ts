@@ -12,7 +12,7 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { google } from 'googleapis';
-import type { drive_v3, calendar_v3 } from 'googleapis';
+import type { drive_v3, calendar_v3, gmail_v1 } from 'googleapis';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -27,6 +27,7 @@ import docsService from './services/docs/index.js';
 import sheetsService from './services/sheets/index.js';
 import slidesService from './services/slides/index.js';
 import calendarService from './services/calendar/index.js';
+import gmailService from './services/gmail/index.js';
 
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
@@ -42,7 +43,14 @@ export const VERSION = packageJson.version;
 // ---------------------------------------------------------------------------
 // Service registry
 // ---------------------------------------------------------------------------
-export const SERVICE_KEYS = ['drive', 'docs', 'sheets', 'slides', 'calendar'] as const;
+export const SERVICE_KEYS = [
+  'drive',
+  'docs',
+  'sheets',
+  'slides',
+  'calendar',
+  'gmail',
+] as const;
 export type ServiceKey = (typeof SERVICE_KEYS)[number];
 
 export const SERVICES: Record<ServiceKey, ServiceModule> = {
@@ -51,6 +59,7 @@ export const SERVICES: Record<ServiceKey, ServiceModule> = {
   sheets: sheetsService,
   slides: slidesService,
   calendar: calendarService,
+  gmail: gmailService,
 };
 
 // ---------------------------------------------------------------------------
@@ -60,6 +69,7 @@ export function buildToolContext(authClient: any): ToolContext {
   const getDrive = (): drive_v3.Drive => google.drive({ version: 'v3', auth: authClient });
   const getCalendar = (): calendar_v3.Calendar =>
     google.calendar({ version: 'v3', auth: authClient });
+  const getGmail = (): gmail_v1.Gmail => google.gmail({ version: 'v1', auth: authClient });
 
   async function resolvePath(pathStr: string): Promise<string> {
     if (!pathStr || pathStr === '/') return 'root';
@@ -147,6 +157,7 @@ export function buildToolContext(authClient: any): ToolContext {
     google,
     getDrive,
     getCalendar,
+    getGmail,
     log,
     resolvePath,
     resolveFolderId,
