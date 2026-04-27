@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import type { ToolDefinition, ToolResult, ToolContext } from '../types.js';
-import { errorResponse } from '../types.js';
-import { parseA1Range, convertA1ToGridRange, escapeDriveQuery, type GridRange } from '../utils.js';
+import type { ToolDefinition, ToolResult, ToolContext } from '../../types.js';
+import { errorResponse } from '../../types.js';
+import { parseA1Range, convertA1ToGridRange, escapeDriveQuery, type GridRange } from '../../utils.js';
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
@@ -181,6 +181,7 @@ const ListGoogleSheetsSchema = z.object({
 export const toolDefinitions: ToolDefinition[] = [
   {
     name: "createGoogleSheet",
+    annotations: { destructiveHint: false },
     description: "Create a new Google Sheet. By default uses RAW mode which stores values as-is. Set valueInputOption to 'USER_ENTERED' only when you need formulas to be evaluated.",
     inputSchema: {
       type: "object",
@@ -203,6 +204,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "updateGoogleSheet",
+    annotations: { destructiveHint: true },
     description: "Update an existing Google Sheet. By default uses RAW mode which stores values as-is. Set valueInputOption to 'USER_ENTERED' only when you need formulas to be evaluated.",
     inputSchema: {
       type: "object",
@@ -225,6 +227,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getGoogleSheetContent",
+    annotations: { readOnlyHint: true },
     description: "Get content of a Google Sheet with cell information",
     inputSchema: {
       type: "object",
@@ -237,6 +240,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "formatGoogleSheetCells",
+    annotations: { destructiveHint: true },
     description: "Format cells in a Google Sheet (background, borders, alignment)",
     inputSchema: {
       type: "object",
@@ -273,6 +277,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "formatGoogleSheetText",
+    annotations: { destructiveHint: true },
     description: "Apply text formatting to cells in a Google Sheet",
     inputSchema: {
       type: "object",
@@ -300,6 +305,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "formatGoogleSheetNumbers",
+    annotations: { destructiveHint: true },
     description: "Apply number formatting to cells in a Google Sheet",
     inputSchema: {
       type: "object",
@@ -321,6 +327,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "setGoogleSheetBorders",
+    annotations: { destructiveHint: true },
     description: "Set borders for cells in a Google Sheet",
     inputSchema: {
       type: "object",
@@ -354,6 +361,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "mergeGoogleSheetCells",
+    annotations: { destructiveHint: true },
     description: "Merge cells in a Google Sheet",
     inputSchema: {
       type: "object",
@@ -371,6 +379,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addGoogleSheetConditionalFormat",
+    annotations: { destructiveHint: false },
     description: "Add conditional formatting to a Google Sheet",
     inputSchema: {
       type: "object",
@@ -423,6 +432,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getSpreadsheetInfo",
+    annotations: { readOnlyHint: true },
     description: "Gets detailed information about a Google Spreadsheet including all sheets/tabs",
     inputSchema: {
       type: "object",
@@ -434,6 +444,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "appendSpreadsheetRows",
+    annotations: { destructiveHint: false },
     description: "Appends rows of data to the end of a sheet in a Google Spreadsheet",
     inputSchema: {
       type: "object",
@@ -462,6 +473,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addSpreadsheetSheet",
+    annotations: { destructiveHint: false },
     description: "Adds a new sheet/tab to an existing Google Spreadsheet",
     inputSchema: {
       type: "object",
@@ -474,6 +486,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addSheet",
+    annotations: { destructiveHint: false },
     description: "Alias for addSpreadsheetSheet (adds a new sheet/tab)",
     inputSchema: {
       type: "object",
@@ -486,6 +499,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listSheets",
+    annotations: { readOnlyHint: true },
     description: "List tabs/sheets in a Google Spreadsheet",
     inputSchema: {
       type: "object",
@@ -497,6 +511,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "renameSheet",
+    annotations: { destructiveHint: true },
     description: "Rename a sheet/tab by sheetId",
     inputSchema: {
       type: "object",
@@ -510,6 +525,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "deleteSheet",
+    annotations: { destructiveHint: true },
     description: "Delete a sheet/tab by sheetId",
     inputSchema: {
       type: "object",
@@ -522,6 +538,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addDataValidation",
+    annotations: { destructiveHint: false },
     description: "Add data validation rules to a sheet range",
     inputSchema: {
       type: "object",
@@ -538,6 +555,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "protectRange",
+    annotations: { destructiveHint: true },
     description: "Protect a range in a spreadsheet",
     inputSchema: {
       type: "object",
@@ -552,6 +570,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addNamedRange",
+    annotations: { destructiveHint: false },
     description: "Create a named range",
     inputSchema: {
       type: "object",
@@ -565,6 +584,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listGoogleSheets",
+    annotations: { readOnlyHint: true },
     description: "Lists Google Spreadsheets from your Google Drive with optional filtering",
     inputSchema: {
       type: "object",

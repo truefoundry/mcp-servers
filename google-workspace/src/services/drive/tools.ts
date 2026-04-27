@@ -5,10 +5,10 @@ import { mkdtemp, readFile, writeFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { basename, extname, join } from 'path';
 import { PDFDocument } from 'pdf-lib';
-import type { ToolDefinition, ToolContext, ToolResult } from '../types.js';
-import { errorResponse } from '../types.js';
-import { escapeDriveQuery, getMimeTypeFromFilename, TEXT_MIME_TYPES } from '../utils.js';
-import { downloadDriveFile, GOOGLE_WORKSPACE_EXPORT_FORMATS } from '../download-file.js';
+import type { ToolDefinition, ToolContext, ToolResult } from '../../types.js';
+import { errorResponse } from '../../types.js';
+import { escapeDriveQuery, getMimeTypeFromFilename, TEXT_MIME_TYPES } from '../../utils.js';
+import { downloadDriveFile, GOOGLE_WORKSPACE_EXPORT_FORMATS } from '../../download-file.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -230,6 +230,7 @@ const AuthTestFileAccessSchema = z.object({
 export const toolDefinitions: ToolDefinition[] = [
   {
     name: "search",
+    annotations: { readOnlyHint: true },
     description: "Search for files in Google Drive. Set rawQuery=true to pass a raw Google Drive API query supporting operators like modifiedTime, createdTime, mimeType, name contains, etc.",
     inputSchema: {
       type: "object",
@@ -244,6 +245,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "createTextFile",
+    annotations: { destructiveHint: false },
     description: "Create a new text or markdown file",
     inputSchema: {
       type: "object",
@@ -257,6 +259,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "updateTextFile",
+    annotations: { destructiveHint: true },
     description: "Update an existing text or markdown file",
     inputSchema: {
       type: "object",
@@ -270,6 +273,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "createFolder",
+    annotations: { destructiveHint: false },
     description: "Create a new folder in Google Drive",
     inputSchema: {
       type: "object",
@@ -282,6 +286,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listFolder",
+    annotations: { readOnlyHint: true },
     description: "List contents of a folder (defaults to root)",
     inputSchema: {
       type: "object",
@@ -294,6 +299,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listSharedDrives",
+    annotations: { readOnlyHint: true },
     description: "List available Google Shared Drives",
     inputSchema: {
       type: "object",
@@ -305,6 +311,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "deleteItem",
+    annotations: { destructiveHint: true },
     description: "Move a file or folder to trash (can be restored from Google Drive trash)",
     inputSchema: {
       type: "object",
@@ -316,6 +323,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "renameItem",
+    annotations: { destructiveHint: true },
     description: "Rename a file or folder",
     inputSchema: {
       type: "object",
@@ -328,6 +336,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "moveItem",
+    annotations: { destructiveHint: true },
     description: "Move a file or folder",
     inputSchema: {
       type: "object",
@@ -340,6 +349,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "copyFile",
+    annotations: { destructiveHint: true },
     description: "Creates a copy of a Google Drive file or document",
     inputSchema: {
       type: "object",
@@ -353,6 +363,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "uploadFile",
+    annotations: { destructiveHint: false },
     description: "Upload a local file (any type: image, audio, video, PDF, etc.) to Google Drive",
     inputSchema: {
       type: "object",
@@ -368,6 +379,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "downloadFile",
+    annotations: { readOnlyHint: true },
     description: "Download a Google Drive file to a local path. For Google Workspace files (Docs, Sheets, Slides, Drawings), exports to the specified format. For regular files, downloads as-is. Streams directly to disk.",
     inputSchema: {
       type: "object",
@@ -388,6 +400,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listPermissions",
+    annotations: { readOnlyHint: true },
     description: "List sharing permissions for a file",
     inputSchema: {
       type: "object",
@@ -399,6 +412,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addPermission",
+    annotations: { destructiveHint: false },
     description: "Add a sharing permission to a file",
     inputSchema: {
       type: "object",
@@ -415,6 +429,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "updatePermission",
+    annotations: { destructiveHint: true },
     description: "Update an existing permission role",
     inputSchema: {
       type: "object",
@@ -428,6 +443,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "removePermission",
+    annotations: { destructiveHint: true },
     description: "Remove a permission from a file (by permissionId or emailAddress)",
     inputSchema: {
       type: "object",
@@ -441,6 +457,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "shareFile",
+    annotations: { destructiveHint: false },
     description: "Convenience wrapper to share a file with a user email",
     inputSchema: {
       type: "object",
@@ -456,6 +473,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "convertPdfToGoogleDoc",
+    annotations: { destructiveHint: true },
     description: "Convert an existing PDF in Drive into an editable Google Doc",
     inputSchema: {
       type: "object",
@@ -469,6 +487,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "bulkConvertFolderPdfs",
+    annotations: { destructiveHint: true },
     description: "Convert all PDFs in a folder into Google Docs and return per-file results",
     inputSchema: {
       type: "object",
@@ -482,6 +501,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "uploadPdfWithSplit",
+    annotations: { destructiveHint: false },
     description: "Upload PDF and optionally split into chunked parts (metadata split plan for now)",
     inputSchema: {
       type: "object",
@@ -497,6 +517,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getRevisions",
+    annotations: { readOnlyHint: true },
     description: "List revisions for a file",
     inputSchema: {
       type: "object",
@@ -510,6 +531,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "restoreRevision",
+    annotations: { destructiveHint: true },
     description: "Restore a file to a selected revision (creates a new head revision). Note: workspace files (Docs, Sheets, Slides) are restored via export/import and may lose some formatting.",
     inputSchema: {
       type: "object",
@@ -523,6 +545,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "authTestFileAccess",
+    annotations: { destructiveHint: true },
     description: "Run auth diagnostics against Drive API/file access",
     inputSchema: {
       type: "object",
@@ -533,6 +556,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "createShortcut",
+    annotations: { destructiveHint: false },
     description: "Create a shortcut (link) to a file or folder in Google Drive. Useful for referencing the same document from multiple locations without duplicating it.",
     inputSchema: {
       type: "object",
@@ -555,6 +579,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "lockFile",
+    annotations: { destructiveHint: true },
     description: "Lock a file to prevent editing by setting content restrictions. The file remains readable but cannot be modified until unlocked.",
     inputSchema: {
       type: "object",
@@ -577,6 +602,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "unlockFile",
+    annotations: { destructiveHint: true },
     description: "Unlock a previously locked file by removing content restrictions, restoring full edit access.",
     inputSchema: {
       type: "object",

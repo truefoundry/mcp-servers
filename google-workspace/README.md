@@ -29,11 +29,13 @@ The drive / docs / sheets / slides tool sets are ported verbatim from the upstre
 
 ## Architecture
 
-- **One Node process, 5 MCP endpoints.** Each `POST /mcp/<service>` request opens a session bound to a `StreamableHTTPServerTransport`, and the underlying MCP `Server` is created via `createMcpServer({ services: ['<service>'] })` so `tools/list` only returns that one service's tools.
+- **One Node process, 6 MCP endpoints.** Each `POST /mcp/<service>` request opens a session bound to a `StreamableHTTPServerTransport`, and the underlying MCP `Server` is created via `createMcpServer({ services: ['<service>'] })` so `tools/list` only returns that one service's tools.
 - **Per-request OAuth (multi-tenant).** Every request must carry the end-user's Google access token in `Authorization: Bearer …`. The TFY Gateway runs the OAuth dance with Google and forwards the token. The server has no local OAuth flow, no on-disk token storage, no service-account fallback — credentials live in the gateway.
-- **Tool annotations.** Every tool definition gets `annotations: { destructiveHint, readOnlyHint, idempotentHint, openWorldHint }` computed from its name prefix in `src/annotations.ts`.
+- **Tool annotations.** Every `ToolDefinition` carries an explicit `annotations` object (see [Tool annotations](#tool-annotations)). The fields are hardcoded next to each tool so the wire shape is reviewable in the source.
 
 ## Repository layout
+
+All six services share the same shape: `index.ts` is an 11-line `ServiceModule` wrapper, `tools.ts` holds the `toolDefinitions` array (with hardcoded `annotations`) plus the `handleTool` switch, and per-service helpers live under `helpers/`.
 
 ```
 src/
@@ -41,17 +43,16 @@ src/
   server.ts               # createMcpServer({ services: [...] }) factory
   auth-ctx.ts             # per-request OAuth2Client resolution from Bearer token
   auth/client.ts          # one-time loader for the app's client_id/client_secret
-  annotations.ts          # tool annotation classifier
-  types.ts                # ToolDefinition, ToolContext, ServiceModule
+  types.ts                # ToolDefinition, ToolAnnotations, ToolContext, ServiceModule
   utils.ts                # shared helpers (escapeDriveQuery, etc.)
-  tools/                  # drive | docs | sheets | slides implementations
+  download-file.ts        # drive export/download helpers
   services/
-    drive/                # wrapper -> tools/drive.ts + annotations
-    docs/                 # wrapper -> tools/docs.ts + annotations
-    sheets/               # wrapper -> tools/sheets.ts + annotations
-    slides/               # wrapper -> tools/slides.ts + annotations
-    calendar/             # migrated from google-calendar-mcp (handlers + schemas)
-    gmail/                # ported from Gmail-MCP-Server (no attachments)
+    drive/                # index.ts + tools.ts
+    docs/                 # index.ts + tools.ts
+    sheets/               # index.ts + tools.ts
+    slides/               # index.ts + tools.ts
+    calendar/             # index.ts + tools.ts + schemas.ts + helpers/
+    gmail/                # index.ts + tools.ts + schemas.ts + helpers/
   transports/
     http.ts               # Express app with 6 mounted MCP routes + /health
 Dockerfile
@@ -155,15 +156,15 @@ Auth settings are the same for all six:
 
 ## Tool annotations
 
-Applied automatically by `src/annotations.ts` based on the tool name prefix:
+Annotations are hardcoded next to each tool definition in `src/services/<svc>/tools.ts`. We use a minimal shape — only the field that changes the badge is set:
 
-- **Read-only** (`readOnlyHint: true`): `list`, `get`, `read`, `search`, `find`, `export`, `download`, `count`, `describe`, `preview`.
-- **Additive** (no badge): `create`, `insert`, `add`, `append`, `upload`, `share` — operations that produce new data without overwriting or removing existing data.
-- **Destructive** (`destructiveHint: true`): `delete`, `remove`, `trash`, `replace`, `update`, `move`, `clear`, `revoke`, `archive`, `rename`, `unshare`, `set`, `format`, `apply`, `writeFile`, `batchUpdate`.
-- Conflicts (e.g. `findAndReplaceInDoc` matches both) are resolved via `EXPLICIT_OVERRIDES` in `src/annotations.ts`.
-- All tools get `openWorldHint: true` because they all talk to Google's APIs.
+- **Read-only** (`readOnlyHint: true`): `list*`, `get*`, `read*`, `search*`, `download*`, `export*`, `getFreeBusy`, etc.
+- **Additive** (`destructiveHint: false`): tools that produce new data without overwriting or removing existing data — `create*`, `insert*`, `add*`, `append*`, `upload*`, `share*`, `send_email`, `draft_email`, `get_or_create_label`, `create_filter*`.
+- **Destructive** (`destructiveHint: true`): tools that modify or remove existing data — `update*`, `delete*`, `remove*`, `move*`, `rename*`, `replace*`, `format*`, `apply*`, `set*`, `protect*`, `merge*`, `convert*`, `lock*`, `restore*`, `batch_modify_emails`, `batch_delete_emails`, `update_label`, `delete_label`, `delete_filter`, etc.
 
-See the full per-tool breakdown with `node scripts/list-tools.mjs` after `npm run build`.
+Defaults from the MCP SDK fill in the rest (`destructiveHint: true`, `idempotentHint: false`, `openWorldHint: true`), so we only set what we want to override.
+
+Run `MCP_TESTING=1 node scripts/list-tools.mjs` after `npm run build` for the full per-tool breakdown (`[R]` = read-only, `[D]` = destructive, `[]` = additive).
 
 ## Gmail notes
 
@@ -180,6 +181,6 @@ The gmail service requests two scopes: `gmail.modify` (covers reading, sending, 
 
 ## Migrated from
 
-- Upstream `piotr-agier/google-drive-mcp` → `src/tools/*` (drive / docs / sheets / slides).
-- (Removed) internal `mcp-servers/google-calendar-mcp` → `src/services/calendar/handlers/` + `src/services/calendar/schemas/`.
+- Upstream `piotr-agier/google-drive-mcp` → `src/services/{drive,docs,sheets,slides}/tools.ts`.
+- (Removed) internal `mcp-servers/google-calendar-mcp` → `src/services/calendar/` (class-based handlers flattened into a single `tools.ts` switch dispatcher; helpers under `helpers/`).
 - Upstream `gongrzhe/server-gmail-autoauth-mcp` → `src/services/gmail/` (attachment features dropped, per-request OAuth in place of upstream's local file-based token store).

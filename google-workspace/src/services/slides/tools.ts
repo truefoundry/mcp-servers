@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { slides_v1 } from 'googleapis';
-import type { ToolDefinition, ToolResult, ToolContext } from '../types.js';
-import { errorResponse } from '../types.js';
-import { uploadImageToDrive, deleteDriveFile } from '../utils/driveImageUpload.js';
+import type { ToolDefinition, ToolResult, ToolContext } from '../../types.js';
+import { errorResponse } from '../../types.js';
+import { uploadImageToDrive, deleteDriveFile } from '../../utils/driveImageUpload.js';
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
@@ -252,6 +252,7 @@ async function insertImageIntoSlide(
 export const toolDefinitions: ToolDefinition[] = [
   {
     name: "createGoogleSlides",
+    annotations: { destructiveHint: false },
     description: "Create a new Google Slides presentation",
     inputSchema: {
       type: "object",
@@ -275,6 +276,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "updateGoogleSlides",
+    annotations: { destructiveHint: true },
     description: "Update an existing Google Slides presentation",
     inputSchema: {
       type: "object",
@@ -297,6 +299,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getGoogleSlidesContent",
+    annotations: { readOnlyHint: true },
     description: "Get content of Google Slides with element IDs for formatting",
     inputSchema: {
       type: "object",
@@ -309,6 +312,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "formatGoogleSlidesText",
+    annotations: { destructiveHint: true },
     description: "Apply text formatting to elements in Google Slides",
     inputSchema: {
       type: "object",
@@ -338,6 +342,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "formatGoogleSlidesParagraph",
+    annotations: { destructiveHint: true },
     description: "Apply paragraph formatting to text in Google Slides",
     inputSchema: {
       type: "object",
@@ -361,6 +366,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "styleGoogleSlidesShape",
+    annotations: { destructiveHint: true },
     description: "Style shapes in Google Slides",
     inputSchema: {
       type: "object",
@@ -398,6 +404,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "setGoogleSlidesBackground",
+    annotations: { destructiveHint: true },
     description: "Set background color for slides",
     inputSchema: {
       type: "object",
@@ -424,6 +431,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "createGoogleSlidesTextBox",
+    annotations: { destructiveHint: false },
     description: "Create a text box in Google Slides",
     inputSchema: {
       type: "object",
@@ -444,6 +452,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "createGoogleSlidesShape",
+    annotations: { destructiveHint: false },
     description: "Create a shape in Google Slides",
     inputSchema: {
       type: "object",
@@ -475,6 +484,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getGoogleSlidesSpeakerNotes",
+    annotations: { readOnlyHint: true },
     description: "Get speaker notes from a specific slide in Google Slides",
     inputSchema: {
       type: "object",
@@ -487,6 +497,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "updateGoogleSlidesSpeakerNotes",
+    annotations: { destructiveHint: true },
     description: "Update speaker notes for a specific slide in Google Slides",
     inputSchema: {
       type: "object",
@@ -500,6 +511,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "deleteGoogleSlide",
+    annotations: { destructiveHint: true },
     description: "Delete a slide from a presentation",
     inputSchema: {
       type: "object",
@@ -512,6 +524,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "duplicateSlide",
+    annotations: { destructiveHint: true },
     description: "Duplicate a slide in a presentation",
     inputSchema: {
       type: "object",
@@ -524,6 +537,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "reorderSlides",
+    annotations: { destructiveHint: true },
     description: "Reorder one or more slides in a presentation",
     inputSchema: {
       type: "object",
@@ -537,6 +551,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "replaceAllTextInSlides",
+    annotations: { destructiveHint: true },
     description: "Replace all matching text across presentation slides",
     inputSchema: {
       type: "object",
@@ -551,6 +566,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "exportSlideThumbnail",
+    annotations: { readOnlyHint: true },
     description: "Export a slide thumbnail URL",
     inputSchema: {
       type: "object",
@@ -565,6 +581,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "insertSlidesImageFromUrl",
+    annotations: { destructiveHint: false },
     description: "Insert an image into a Google Slides slide from a publicly accessible URL",
     inputSchema: {
       type: "object",
@@ -582,6 +599,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getSlideElementInfo",
+    annotations: { readOnlyHint: true },
     description: "Get position, size, and transform of all elements on a slide. Returns actual rendered bounds.",
     inputSchema: {
       type: "object",
@@ -594,6 +612,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "moveSlideElement",
+    annotations: { destructiveHint: true },
     description: "Move and/or resize an element (image, text box, shape) on a Google Slides slide",
     inputSchema: {
       type: "object",
@@ -610,6 +629,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "deleteSlideElement",
+    annotations: { destructiveHint: true },
     description: "Delete an element (image, text box, shape) from a Google Slides slide",
     inputSchema: {
       type: "object",
@@ -622,6 +642,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "insertSlidesLocalImage",
+    annotations: { destructiveHint: false },
     description: "Upload a local image file to Google Drive and insert it into a Google Slides slide",
     inputSchema: {
       type: "object",

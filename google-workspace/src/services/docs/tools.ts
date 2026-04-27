@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import JSZip from 'jszip';
-import type { ToolDefinition, ToolContext, ToolResult } from '../types.js';
-import { errorResponse } from '../types.js';
-import { escapeDriveQuery } from '../utils.js';
-import { uploadImageToDrive } from '../utils/driveImageUpload.js';
+import type { ToolDefinition, ToolContext, ToolResult } from '../../types.js';
+import { errorResponse } from '../../types.js';
+import { escapeDriveQuery } from '../../utils.js';
+import { uploadImageToDrive } from '../../utils/driveImageUpload.js';
 
 // ---------------------------------------------------------------------------
 // Helper functions
@@ -931,6 +931,7 @@ const CreateFootnoteSchema = z.object({
 export const toolDefinitions: ToolDefinition[] = [
   {
     name: "createGoogleDoc",
+    annotations: { destructiveHint: false },
     description: "Create a new Google Doc",
     inputSchema: {
       type: "object",
@@ -944,6 +945,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "updateGoogleDoc",
+    annotations: { destructiveHint: true },
     description: "Update an existing Google Doc (replaces all content). For multi-tab docs, specify tabId to replace a single tab's content atomically; leaves other tabs untouched.",
     inputSchema: {
       type: "object",
@@ -957,6 +959,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "insertText",
+    annotations: { destructiveHint: false },
     description: "Insert text at a specific index in a Google Doc (surgical edit, doesn't replace entire doc). For multi-tab docs, specify tabId to target a specific tab.",
     inputSchema: {
       type: "object",
@@ -971,6 +974,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "deleteRange",
+    annotations: { destructiveHint: true },
     description: "Delete content between start and end indices in a Google Doc. For multi-tab docs, specify tabId to target a specific tab.",
     inputSchema: {
       type: "object",
@@ -985,6 +989,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "readGoogleDoc",
+    annotations: { readOnlyHint: true },
     description: "Read content of a Google Doc with format options. Supports multi-tab documents.",
     inputSchema: {
       type: "object",
@@ -999,6 +1004,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listDocumentTabs",
+    annotations: { readOnlyHint: true },
     description: "List all tabs in a Google Doc with their IDs and hierarchy",
     inputSchema: {
       type: "object",
@@ -1011,6 +1017,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "applyTextStyle",
+    annotations: { destructiveHint: true },
     description: "Apply text formatting (bold, italic, color, etc.) to a range or found text. Use EITHER startIndex+endIndex OR textToFind for targeting.",
     inputSchema: {
       type: "object",
@@ -1035,6 +1042,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "applyParagraphStyle",
+    annotations: { destructiveHint: true },
     description: "Apply paragraph formatting. Use EITHER startIndex+endIndex OR textToFind OR indexWithinParagraph for targeting.",
     inputSchema: {
       type: "object",
@@ -1058,6 +1066,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "formatGoogleDocText",
+    annotations: { destructiveHint: true },
     description: "Apply text formatting (bold, italic, font, color, links) to a range or found text in a Google Doc. Alias for applyTextStyle.",
     inputSchema: {
       type: "object",
@@ -1082,6 +1091,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "formatGoogleDocParagraph",
+    annotations: { destructiveHint: true },
     description: "Apply paragraph formatting (alignment, indentation, spacing, heading style) in a Google Doc. Alias for applyParagraphStyle.",
     inputSchema: {
       type: "object",
@@ -1105,6 +1115,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "createParagraphBullets",
+    annotations: { destructiveHint: false },
     description: "Add or remove bullet points / numbered lists on paragraphs in a Google Doc. Target paragraphs by startIndex+endIndex or textToFind. Use bulletPreset='NONE' to remove bullets.",
     inputSchema: {
       type: "object",
@@ -1121,6 +1132,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "findAndReplaceInDoc",
+    annotations: { destructiveHint: true },
     description: "Find and replace text across a Google Document. Dry-run mode counts matches from paragraph text only (may differ from actual replacements which cover tables, headers, footers, etc.). For multi-tab docs, specify tabId to scope replacements to a single tab.",
     inputSchema: {
       type: "object",
@@ -1137,6 +1149,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listComments",
+    annotations: { readOnlyHint: true },
     description: "List all comments in a Google Document",
     inputSchema: {
       type: "object",
@@ -1151,6 +1164,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getComment",
+    annotations: { readOnlyHint: true },
     description: "Get a specific comment with its full thread of replies",
     inputSchema: {
       type: "object",
@@ -1163,6 +1177,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addComment",
+    annotations: { destructiveHint: false },
     description: "Add a comment anchored to a specific text range. Note: Due to Google API limitations, programmatic comments appear in 'All Comments' but may not be visibly anchored in the document UI.",
     inputSchema: {
       type: "object",
@@ -1177,6 +1192,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "replyToComment",
+    annotations: { destructiveHint: true },
     description: "Add a reply to an existing comment",
     inputSchema: {
       type: "object",
@@ -1191,6 +1207,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "deleteComment",
+    annotations: { destructiveHint: true },
     description: "Delete a comment from the document",
     inputSchema: {
       type: "object",
@@ -1203,6 +1220,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getGoogleDocContent",
+    annotations: { readOnlyHint: true },
     description: "Get content of a Google Doc with text indices for formatting",
     inputSchema: {
       type: "object",
@@ -1215,6 +1233,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "insertTable",
+    annotations: { destructiveHint: false },
     description: "Insert a new table with the specified dimensions at a given index",
     inputSchema: {
       type: "object",
@@ -1229,6 +1248,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "editTableCell",
+    annotations: { destructiveHint: true },
     description: "Edit the content and/or style of a specific table cell. Requires knowing the table start index.",
     inputSchema: {
       type: "object",
@@ -1248,6 +1268,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "insertImageFromUrl",
+    annotations: { destructiveHint: false },
     description: "Insert an inline image into a Google Document from a publicly accessible URL",
     inputSchema: {
       type: "object",
@@ -1263,6 +1284,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "insertLocalImage",
+    annotations: { destructiveHint: false },
     description: "Upload a local image file to Google Drive and insert it into a Google Document",
     inputSchema: {
       type: "object",
@@ -1280,6 +1302,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "listGoogleDocs",
+    annotations: { readOnlyHint: true },
     description: "Lists Google Documents from your Google Drive with optional filtering.",
     inputSchema: {
       type: "object",
@@ -1293,6 +1316,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "getDocumentInfo",
+    annotations: { readOnlyHint: true },
     description: "Gets detailed information about a specific Google Document.",
     inputSchema: {
       type: "object",
@@ -1304,6 +1328,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "addDocumentTab",
+    annotations: { destructiveHint: false },
     description: "Add a new tab in a Google Doc",
     inputSchema: {
       type: "object",
@@ -1316,6 +1341,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "renameDocumentTab",
+    annotations: { destructiveHint: true },
     description: "Rename an existing Google Doc tab",
     inputSchema: {
       type: "object",
@@ -1329,6 +1355,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "insertSmartChip",
+    annotations: { destructiveHint: false },
     description: "Insert a person smart chip (mention) at a document index. Only person chips are supported by the Docs API; date and file chips are read-only.",
     inputSchema: {
       type: "object",
@@ -1343,6 +1370,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "readSmartChips",
+    annotations: { readOnlyHint: true },
     description: "Read smart chip-like elements (person mentions, rich links, date chips) from the default tab of a document",
     inputSchema: {
       type: "object",
@@ -1354,6 +1382,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "createFootnote",
+    annotations: { destructiveHint: false },
     description: "Create a footnote in a Google Doc. Footnotes cannot be inserted inside equations, headers, footers, or other footnotes.",
     inputSchema: {
       type: "object",

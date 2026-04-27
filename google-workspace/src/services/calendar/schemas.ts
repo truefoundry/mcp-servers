@@ -1,7 +1,7 @@
 /**
- * Zod input schemas for the calendar service tools. Extracted from
- * mcp-servers/google-calendar-mcp/src/tools/registry.ts to keep the
- * handlers in this package self-contained.
+ * Zod input schemas + auxiliary types for the calendar service tools.
+ * Originally split across schemas/inputs.ts + schemas/types.ts; consolidated
+ * here for consistency with the other services.
  */
 import { z } from 'zod';
 
@@ -243,3 +243,25 @@ export type UpdateEventInput = ToolInputs['update-event'];
 export type DeleteEventInput = ToolInputs['delete-event'];
 export type GetFreeBusyInput = ToolInputs['get-freebusy'];
 export type GetCurrentTimeInput = ToolInputs['get-current-time'];
+
+// Type-safe response based on Google Calendar FreeBusy API.
+export interface FreeBusyResponse {
+  kind: 'calendar#freeBusy';
+  timeMin: string;
+  timeMax: string;
+  groups?: {
+    [key: string]: {
+      errors?: { domain: string; reason: string }[];
+      calendars?: string[];
+    };
+  };
+  calendars: {
+    [key: string]: {
+      errors?: { domain: string; reason: string }[];
+      busy: {
+        start: string;
+        end: string;
+      }[];
+    };
+  };
+}
