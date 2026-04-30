@@ -63,25 +63,74 @@ scripts/build.js          # esbuild bundle to dist/index.js
 
 ## Salesforce Connected App setup
 
-In Setup -> External Client App Manager -> New External Client App:
+You need a Salesforce Connected App so the TFY Gateway has a Client ID / Client Secret to run the OAuth Web Server Flow with. You only do this once per Salesforce org.
 
-- **OAuth Settings**
-  - Callback URL: `https://<your-tfy-control-plane>/api/svc/v1/llm-gateway/mcp-servers/oauth2/callback`
-  - Selected OAuth Scopes:
-    - `Manage user data via APIs (api)`
-    - `Perform requests at any time (refresh_token, offline_access)`
-    - `Access the identity URL service (id, profile, email, address, phone)` — required for `instance_url` discovery
-- **Flow Enablement**
-  - Enable **Authorization Code and Credentials Flow** (Web Server Flow)
-- **Security**
-  - Require secret for Web Server Flow: ON
-  - Require secret for Refresh Token Flow: ON
-- **Policies** (after creation)
-  - Permitted Users: `All users may self-authorize`
-  - IP Relaxation: `Relax IP restrictions`
-  - Refresh Token Policy: `Refresh token is valid until revoked`
+### Step 1: Create the Connected App
 
-After creation, grab `Consumer Key` (-> client ID) and `Consumer Secret` from **Settings -> OAuth Settings -> Consumer Key and Secret -> Manage Consumer Details**. These go into the **TFY LLM Gateway MCP server registration**, not the pod.
+1. Log into Salesforce as an admin.
+2. **Setup** (gear icon, top right) → search **External Client App Manager** in the left rail.
+3. Click **New External Client App**.
+4. Fill the basics:
+   - **External Client App Name**: `TrueFoundry MCP` (anything human-readable)
+   - **API Name**: auto-fills
+   - **Contact Email**: yours
+   - **Distribution State**: Local
+
+### Step 2: Enable OAuth and configure scopes
+
+In the same form, scroll to **API (Enable OAuth Settings)** and check **Enable OAuth**. Then:
+
+- **Callback URL**:
+  ```
+  https://<your-tfy-control-plane>/api/svc/v1/llm-gateway/mcp-servers/oauth2/callback
+  ```
+  (e.g. `https://internal.devtest.truefoundry.tech/api/svc/v1/llm-gateway/mcp-servers/oauth2/callback`)
+
+- **Selected OAuth Scopes** (move all three to the right pane):
+  - `Manage user data via APIs (api)`
+  - `Perform requests at any time (refresh_token, offline_access)`
+  - `Access the Identity URL service (id, profile, email, address, phone)` ← **required**, otherwise `instance_url` discovery returns 403
+
+- **Flow Enablement**:
+  - Check **Enable Authorization Code and Credentials Flow** (this is the Web Server Flow)
+
+- **Security**:
+  - Check **Require secret for Web Server Flow**
+  - Check **Require secret for Refresh Token Flow**
+
+Click **Create**.
+
+### Step 3: Copy the Client ID and Client Secret
+
+After creation, the app opens. Then:
+
+1. Click the **Settings** tab (top of the app page).
+2. Expand **OAuth Settings**.
+3. Find **Consumer Key and Secret** → click **Manage Consumer Details**.
+4. Salesforce will email or text you a verification code. Enter it.
+5. You'll see two values — copy both:
+   - **Consumer Key**  → this is your **Client ID**
+   - **Consumer Secret** → this is your **Client Secret**
+
+> **Treat the Consumer Secret like a password.** Don't paste it in chat, commits, or screenshots. If it leaks, come back to **Manage Consumer Details** and click **Reset** to mint a new one.
+
+### Step 4: Set policies (one-time)
+
+Still on the app page → **Policies** tab:
+
+- **Permitted Users**: `All users may self-authorize`
+- **IP Relaxation**: `Relax IP restrictions`
+- **Refresh Token Policy**: `Refresh token is valid until revoked`
+
+Save.
+
+### Step 5: Plug into the TFY Gateway
+
+The Client ID and Client Secret go into the **TFY LLM Gateway → MCP server registration form**, not into this pod. The pod itself never sees them — it only ever sees the per-user access token the gateway forwards. Use this scopes string in the gateway form:
+
+```
+api refresh_token offline_access id profile email
+```
 
 ## Deploying to TrueFoundry
 
