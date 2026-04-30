@@ -60,6 +60,67 @@ deploy.py                 # TrueFoundry LocalSource(local_build=False) deploy
 gcp-oauth.keys.example.json
 ```
 
+## Setting up the Google OAuth client
+
+You need a **single** Google OAuth web client. The same `client_id` / `client_secret` is shared by all 6 MCP server registrations in the Gateway — only the scopes requested at consent time differ. Steps are one-time per GCP project.
+
+### 1. Pick (or create) a GCP project
+
+Go to <https://console.cloud.google.com/projectcreate> or select an existing project. Your `client_id` will be bound to this project. Note the **project ID** — you'll export it as `GOOGLE_PROJECT_ID`.
+
+### 2. Enable the required Google APIs
+
+For your project, enable each of these from <https://console.cloud.google.com/apis/library>:
+
+- Google Drive API
+- Google Docs API
+- Google Sheets API
+- Google Slides API
+- Google Calendar API
+- Gmail API
+
+Or via gcloud:
+
+```bash
+gcloud config set project <your-project-id>
+gcloud services enable drive.googleapis.com docs.googleapis.com \
+  sheets.googleapis.com slides.googleapis.com calendar-json.googleapis.com \
+  gmail.googleapis.com
+```
+
+### 3. Configure the OAuth consent screen
+
+<https://console.cloud.google.com/apis/credentials/consent>
+
+- **User type**: pick `Internal` if every end user is in the same Google Workspace org as the project (no Google review needed). Otherwise pick `External` and stay in `Testing` status — each end user's Google email then has to be added to the **Test users** list, but you can ship without going through Google's verification process.
+- **App name**: anything user-facing (e.g. `TFY Google Workspace MCP`). Shown on the Google consent screen.
+- **User support email** / **Developer contact**: your email.
+- **Scopes step**: add the union of all scopes used by the 6 MCP server registrations — see the [scopes table](#registering-mcp-servers-in-the-tfy-gateway) below. (You can technically leave this empty for `Internal` or `External + Testing` apps and Google will still grant scopes requested at runtime, but populating it explicitly is required to graduate to `External + Production` and is good practice regardless.)
+- **Test users** (External + Testing only): add the Google email of each end user who should be able to authorize.
+
+### 4. Create the OAuth client credentials
+
+<https://console.cloud.google.com/apis/credentials> → **Create credentials** → **OAuth client ID**.
+
+- **Application type**: **Web application** (do not pick "Desktop app" — the Gateway uses the standard web auth-code flow).
+- **Name**: anything (e.g. `gws-mcp-web-client`).
+- **Authorized redirect URIs**: add this exact URI (no trailing slash, no path additions):
+  ```
+  https://<your-tfy-control-plane>/api/svc/v1/llm-gateway/mcp-servers/oauth2/callback
+  ```
+  Example for devtest: `https://internal.devtest.truefoundry.tech/api/svc/v1/llm-gateway/mcp-servers/oauth2/callback`.
+
+Click **Create**. Google shows the `client_id` (`<digits>-<hash>.apps.googleusercontent.com`) and `client_secret` (`GOCSPX-…`). Copy both — the secret is only shown once, but you can reset it later from the same page.
+
+### 5. Use these credentials in two places
+
+The same `client_id` / `client_secret` pair goes into:
+
+1. **The deployed pod** — exported as env vars before running `python deploy.py` (see [next section](#deploying-to-truefoundry)). `deploy.py` mounts them as `/app/gcp.json` via `StringDataMount`.
+2. **Each of the 6 MCP server registrations** in the TFY Gateway UI (see [Registering MCP servers in the TFY Gateway](#registering-mcp-servers-in-the-tfy-gateway)). Paste the same values in all 6.
+
+> If you ever rotate the secret in Google Cloud Console (Credentials → your web client → **Reset secret**), you must update **both** sides: re-export `GOOGLE_CLIENT_SECRET` and re-run `python deploy.py`, **and** edit the secret in all 6 Gateway registrations. Updating only one side will silently break the OAuth flow.
+
 ## Local development
 
 This server runs over HTTP only. To test locally you need a Google access token (e.g. one minted via `gcloud auth print-access-token` for a project that has the relevant APIs enabled, or one captured from a TFY Gateway session).
@@ -87,12 +148,8 @@ curl -s -X POST http://127.0.0.1:3000/mcp/drive \
 
 Prerequisites:
 
-1. Google Cloud OAuth client (Web application type). Copy `gcp-oauth.keys.example.json` → fill in your `client_id` / `client_secret` / `project_id`. Add the TFY Gateway callback to **Authorized redirect URIs**:
-   ```
-   https://<your-tfy-control-plane>/api/svc/v1/llm-gateway/mcp-servers/oauth2/callback
-   ```
-2. Ensure these Google APIs are enabled in your GCP project: Drive, Docs, Sheets, Slides, Calendar, Gmail.
-3. `tfy login --host https://<your-tfy-control-plane>`.
+1. A Google OAuth web client with all six APIs enabled and the TFY Gateway callback in its **Authorized redirect URIs** — see [Setting up the Google OAuth client](#setting-up-the-google-oauth-client).
+2. `tfy login --host https://<your-tfy-control-plane>`.
 
 Then:
 
