@@ -1,0 +1,46 @@
+{
+  "name": "@truefoundry/google-workspace-mcp",
+  "version": "0.1.0",
+  "description": "Google Workspace MCP Server - Drive, Docs, Sheets, Slides, and Calendar as 5 distinct MCP endpoints on a single TrueFoundry service.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "google-workspace-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && node scripts/build.js",
+    "start": "node dist/index.js",
+    "watch": "node scripts/build.js --watch",
+    "lint": "tsc --noEmit && eslint src/",
+    "lint:types": "tsc --noEmit",
+    "lint:eslint": "eslint src/"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.0",
+    "@types/express": "^5.0.3",
+    "express": "^5.1.0",
+    "google-auth-library": "^9.15.0",
+    "googleapis": "^144.0.0",
+    "jszip": "^3.10.1",
+    "pdf-lib": "^1.17.1",
+    "uuid": "^11.0.3",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.3",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.0",
+    "@typescript-eslint/parser": "^8.56.0",
+    "esbuild": "^0.25.8",
+    "eslint": "^9.39.3",
+    "shx": "^0.4.0",
+    "typescript": "^5.6.2"
+  }
+}
