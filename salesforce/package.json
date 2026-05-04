@@ -1,0 +1,34 @@
+{
+  "name": "@truefoundry/salesforce-mcp",
+  "version": "0.1.0",
+  "description": "Salesforce MCP Server - per-user OAuth bearer auth, fronted by the TrueFoundry LLM Gateway. v0 exposes run_soql_query.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "salesforce-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && node scripts/build.js",
+    "start": "node dist/index.js",
+    "watch": "node scripts/build.js --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.0",
+    "express": "^5.1.0",
+    "jsforce": "^3.6.5",
+    "lru-cache": "^11.0.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.9.3",
+    "esbuild": "^0.25.8",
+    "typescript": "^5.6.2"
+  }
+}
