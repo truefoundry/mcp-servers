@@ -51,6 +51,23 @@ const remindersSchema = z.object({
     .describe('Custom reminders'),
 });
 
+/** MCP clients often send null for omitted optional array fields. */
+const optionalAttendees = z.preprocess(
+  (value) => (!value ? undefined : value),
+  z.array(attendeeSchema).optional(),
+);
+
+/** MCP clients often send {} when reminders are not configured. */
+const optionalReminders = z.preprocess(
+  (value) => {
+    if (!value || (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0)) {
+      return undefined;
+    }
+    return value;
+  },
+  remindersSchema.optional(),
+);
+
 export const ToolSchemas = {
   'list-calendars': z.object({}),
 
@@ -101,13 +118,13 @@ export const ToolSchemas = {
       "Timezone as IANA Time Zone Database name (e.g., America/Los_Angeles). Takes priority over calendar's default timezone. Only used for timezone-naive datetime strings.",
     ),
     location: z.string().optional().describe('Location of the event'),
-    attendees: z.array(attendeeSchema).optional().describe(
+    attendees: optionalAttendees.describe(
       'List of attendees for the event. See the Events with attendees guide for more information on scheduling events with other calendar users.',
     ),
     colorId: z.string().optional().describe(
       'Color ID for the event (use list-colors to see available IDs)',
     ),
-    reminders: remindersSchema.optional().describe('Reminder settings for the event'),
+    reminders: optionalReminders.describe('Reminder settings for the event'),
     recurrence: z
       .array(z.string())
       .optional()
@@ -134,11 +151,11 @@ export const ToolSchemas = {
         "Updated timezone as IANA Time Zone Database name. If not provided, uses the calendar's default timezone.",
       ),
       location: z.string().optional().describe('Updated location'),
-      attendees: z.array(attendeeSchema).optional().describe(
+      attendees: optionalAttendees.describe(
         'Updated attendee list. See the Events with attendees guide for more information on scheduling events with other calendar users.',
       ),
       colorId: z.string().optional().describe('Updated color ID'),
-      reminders: remindersSchema.optional().describe('Reminder settings for the event'),
+      reminders: optionalReminders.describe('Reminder settings for the event'),
       recurrence: z.array(z.string()).optional().describe('Updated recurrence rules'),
       sendUpdates: z
         .enum(['all', 'externalOnly', 'none'])
