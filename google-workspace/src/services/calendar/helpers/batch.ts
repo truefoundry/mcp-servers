@@ -62,6 +62,9 @@ export class BatchRequestHandler {
     try {
       const batchBody = this.createBatchBody(requests);
       const token = await this.auth.getAccessToken();
+      if (!token || !token.token) {
+        throw new Error('No access token available on auth client.');
+      }
 
       const response = await fetch(this.batchEndpoint, {
         method: 'POST',

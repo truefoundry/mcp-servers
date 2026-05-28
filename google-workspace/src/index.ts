@@ -96,7 +96,6 @@ Authentication:
   and forwards the per-user token to this server.
 
 Environment Variables:
-  GOOGLE_DRIVE_OAUTH_CREDENTIALS   Path to OAuth client JSON (default: /app/gcp.json)
   MCP_HTTP_PORT / PORT             HTTP listen port
   MCP_HTTP_HOST / HOST             HTTP bind address
 `);

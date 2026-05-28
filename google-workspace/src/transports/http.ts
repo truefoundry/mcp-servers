@@ -2,7 +2,7 @@
  * HTTP transport — mounts one StreamableHTTPServerTransport per service at
  * `/mcp/<service>`. Each mount exposes only its service's tools (via the
  * server factory) but shares a single Express app, one /health endpoint, and
- * one gcp.json OAuth client config.
+ * per-request Bearer tokens forwarded by the TFY LLM Gateway.
  *
  * Session management is per-mount: each mount has its own map of session IDs
  * → transport+server pairs, keyed off the `mcp-session-id` header.
@@ -14,7 +14,7 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
-import { log, getClientCreds } from '../auth-ctx.js';
+import { log } from '../auth-ctx.js';
 import {
   SERVICE_KEYS,
   SERVICES,
@@ -267,16 +267,6 @@ export async function startHttpTransport(args: StartHttpTransportArgs): Promise<
     console.error(
       `Mounted endpoints: ${SERVICE_KEYS.map((k) => `/mcp/${k}`).join(', ')}`,
     );
-
-    // Pre-load OAuth client credentials so startup failure surfaces early.
-    try {
-      await getClientCreds();
-    } catch (err) {
-      console.error(
-        'Warning: OAuth client credentials not loaded at startup; per-request auth will fail until they are available.',
-        err,
-      );
-    }
 
     const { app, states } = createHttpApp();
 

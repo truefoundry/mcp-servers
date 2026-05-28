@@ -206,7 +206,7 @@ export function createMcpServer(options: CreateMcpServerOptions): Server {
 
   if (driveActive) {
     s.setRequestHandler(ListResourcesRequestSchema, async (request, extra) => {
-      const authClient = await resolveAuthClientForRequest(extra);
+      const authClient = resolveAuthClientForRequest(extra);
       log('Handling ListResources request', { params: request.params });
       const drive = google.drive({ version: 'v3', auth: authClient });
 
@@ -245,7 +245,7 @@ export function createMcpServer(options: CreateMcpServerOptions): Server {
     });
 
     s.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
-      const authClient = await resolveAuthClientForRequest(extra);
+      const authClient = resolveAuthClientForRequest(extra);
       log('Handling ReadResource request', { uri: request.params.uri });
       const drive = google.drive({ version: 'v3', auth: authClient });
 
@@ -341,7 +341,7 @@ export function createMcpServer(options: CreateMcpServerOptions): Server {
     log('Handling tool request', { tool: request.params.name });
 
     try {
-      const authClient = await resolveAuthClientForRequest(extra);
+      const authClient = resolveAuthClientForRequest(extra);
       const ctx = buildToolContext(authClient);
 
       for (const svc of activeServices) {

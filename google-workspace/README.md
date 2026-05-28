@@ -42,7 +42,6 @@ src/
   index.ts                # thin CLI (HTTP transport only)
   server.ts               # createMcpServer({ services: [...] }) factory
   auth-ctx.ts             # per-request OAuth2Client resolution from Bearer token
-  auth/client.ts          # one-time loader for the app's client_id/client_secret
   types.ts                # ToolDefinition, ToolAnnotations, ToolContext, ServiceModule
   utils.ts                # shared helpers (escapeDriveQuery, etc.)
   download-file.ts        # drive export/download helpers
@@ -57,7 +56,6 @@ src/
     http.ts               # Express app with 6 mounted MCP routes + /health
 Dockerfile
 deploy.py                 # TrueFoundry LocalSource(local_build=False) deploy
-gcp-oauth.keys.example.json
 ```
 
 ## Setting up the Google OAuth client
@@ -66,7 +64,7 @@ You need a **single** Google OAuth web client. The same `client_id` / `client_se
 
 ### 1. Pick (or create) a GCP project
 
-Go to <https://console.cloud.google.com/projectcreate> or select an existing project. Your `client_id` will be bound to this project. Note the **project ID** — you'll export it as `GOOGLE_PROJECT_ID`.
+Go to <https://console.cloud.google.com/projectcreate> or select an existing project. Your `client_id` will be bound to this project.
 
 ### 2. Enable the required Google APIs
 
@@ -112,14 +110,11 @@ gcloud services enable drive.googleapis.com docs.googleapis.com \
 
 Click **Create**. Google shows the `client_id` (`<digits>-<hash>.apps.googleusercontent.com`) and `client_secret` (`GOCSPX-…`). Copy both — the secret is only shown once, but you can reset it later from the same page.
 
-### 5. Use these credentials in two places
+### 5. Register the credentials in the TFY Gateway
 
-The same `client_id` / `client_secret` pair goes into:
+Paste the `client_id` / `client_secret` into **each of the 6 MCP server registrations** in the TFY Gateway UI (see [Registering MCP servers in the TFY Gateway](#registering-mcp-servers-in-the-tfy-gateway)). The deployed MCP pod does not need a copy of these credentials.
 
-1. **The deployed pod** — exported as env vars before running `python deploy.py` (see [next section](#deploying-to-truefoundry)). `deploy.py` mounts them as `/app/gcp.json` via `StringDataMount`.
-2. **Each of the 6 MCP server registrations** in the TFY Gateway UI (see [Registering MCP servers in the TFY Gateway](#registering-mcp-servers-in-the-tfy-gateway)). Paste the same values in all 6.
-
-> If you ever rotate the secret in Google Cloud Console (Credentials → your web client → **Reset secret**), you must update **both** sides: re-export `GOOGLE_CLIENT_SECRET` and re-run `python deploy.py`, **and** edit the secret in all 6 Gateway registrations. Updating only one side will silently break the OAuth flow.
+> If you ever rotate the secret in Google Cloud Console (Credentials → your web client → **Reset secret**), update the secret in all 6 Gateway registrations.
 
 ## Local development
 
@@ -128,10 +123,7 @@ This server runs over HTTP only. To test locally you need a Google access token 
 ```bash
 npm install
 npm run build
-
-# Mount your gcp-oauth.keys.json (web client) and start the server.
-GOOGLE_DRIVE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json \
-  npm run start -- --port 3000 --host 127.0.0.1
+npm run start -- --port 3000 --host 127.0.0.1
 
 # In another shell, smoke-test:
 curl -s http://127.0.0.1:3000/health
@@ -154,13 +146,10 @@ Prerequisites:
 Then:
 
 ```bash
-export GOOGLE_CLIENT_ID=...apps.googleusercontent.com
-export GOOGLE_CLIENT_SECRET=GOCSPX-...
-export GOOGLE_PROJECT_ID=your-project-id
 python deploy.py
 ```
 
-`deploy.py` uses `LocalSource(local_build=False)`, so TrueFoundry zips this folder (respecting `.dockerignore`), uploads it, builds the image remotely, and deploys. Secrets (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`) are injected via a `StringDataMount` as `/app/gcp.json` — they never land in git or the image.
+`deploy.py` uses `LocalSource(local_build=False)`, so TrueFoundry zips this folder (respecting `.dockerignore`), uploads it, builds the image remotely, and deploys. OAuth client credentials are configured only in the Gateway — the pod receives per-user access tokens on each request.
 
 After `python deploy.py`:
 
@@ -208,7 +197,7 @@ Auth settings are the same for all six:
 3. On every MCP call, Gateway forwards the call to `https://…/mcp/<svc>` with `Authorization: Bearer <that user's access token>`.
 4. `src/transports/http.ts` attaches the token to `req.auth.access_token`.
 5. The MCP SDK propagates it as `extra.authInfo` into every tool handler.
-6. `src/auth-ctx.ts#resolveAuthClientForRequest` builds a fresh `OAuth2Client` with that access token + the pre-loaded app credentials.
+6. `src/auth-ctx.ts#resolveAuthClientForRequest` builds a token-only `OAuth2Client` from that access token.
 7. Tool handlers call Google APIs as that user.
 
 ## Tool annotations
