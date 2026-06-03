@@ -1,0 +1,44 @@
+# Files excluded from the LocalSource(local_build=False) upload to TrueFoundry.
+#
+# The TFY CLI looks for this file first; if absent it falls back to .gitignore
+# (when source is a git repo) or no filter at all. .dockerignore is NOT used
+# by the upload step - only by `docker build` inside the image.
+#
+# Keep this in sync with .dockerignore as a defense-in-depth layer. NOTE: src/
+# IS shipped (this server runs `node src/index.js` directly, no build step).
+
+# Dependencies - reinstalled inside the image via `npm ci`
+node_modules/
+.cache/
+
+# Tests - not needed in the deployed image
+test/
+
+# VCS / IDE / OS
+.git/
+.gitignore
+.gitattributes
+.github/
+.npmignore
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Local env / secrets - NEVER ship to the build context
+.env
+.env.*
+!.env.example
+
+# Local-only assets
+deploy.py
+README.md

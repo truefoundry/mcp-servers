@@ -1,0 +1,282 @@
+/**
+ * Outlook Calendar tools (Microsoft Graph /me/events, /me/calendar*).
+ */
+
+import { z } from "zod";
+import {
+  graphGet,
+  graphPost,
+  graphPatch,
+  graphDelete,
+} from "../graph.js";
+import { runTool, dateRangeSchema, odataString, searchPhrase } from "./util.js";
+
+const EVENT_SELECT =
+  "id,subject,organizer,start,end,location,bodyPreview,webLink,attendees,isAllDay,isCancelled,onlineMeeting";
+
+const dateTimeSchema = z
+  .object({
+    dateTime: z.string().describe("Local date/time, ISO 8601."),
+    timeZone: z
+      .string()
+      .optional()
+      .describe("IANA/Windows time zone. Defaults to UTC."),
+  })
+  .describe("A Graph dateTimeTimeZone value.");
+
+/** Normalize a {dateTime,timeZone} input, defaulting the zone to UTC. */
+function dateTime(value) {
+  if (!value) return undefined;
+  return { dateTime: value.dateTime, timeZone: value.timeZone || "UTC" };
+}
+
+/** Build a Graph event resource from common create/update fields. */
+function buildEvent({ subject, body, start, end, location, attendees, is_online_meeting }) {
+  const event = {};
+  if (subject !== undefined) event.subject = subject;
+  if (body !== undefined) {
+    event.body = { contentType: body.contentType || "text", content: body.content };
+  }
+  if (start) event.start = dateTime(start);
+  if (end) event.end = dateTime(end);
+  if (location !== undefined) event.location = { displayName: location };
+  if (attendees) {
+    event.attendees = attendees.map((address) => ({
+      emailAddress: { address },
+      type: "required",
+    }));
+  }
+  if (is_online_meeting !== undefined) {
+    event.isOnlineMeeting = is_online_meeting;
+    if (is_online_meeting) event.onlineMeetingProvider = "teamsForBusiness";
+  }
+  return event;
+}
+
+export function registerCalendarTools(server, token) {
+  server.tool(
+    "list_events",
+    "List the signed-in user's upcoming calendar events, ordered by start time.",
+    {
+      calendar_id: z
+        .string()
+        .optional()
+        .describe("Specific calendar id. Defaults to the primary calendar."),
+      top: z
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Max events to return (default 25)."),
+    },
+    runTool(({ calendar_id, top }) => {
+      const base = calendar_id
+        ? `/me/calendars/${odataString(calendar_id)}/events`
+        : "/me/events";
+      return graphGet(token, base, {
+        $top: top ?? 25,
+        $orderby: "start/dateTime",
+        $select: EVENT_SELECT,
+      });
+    }),
+  );
+
+  server.tool(
+    "search_events",
+    "Search calendar events by keyword and/or date range. When a date range " +
+      "is supplied, recurring events are expanded via calendarView.",
+    {
+      query: z.string().optional().describe("Free-text search over events."),
+      date_range: dateRangeSchema,
+    },
+    runTool(({ query, date_range }) => {
+      if (date_range && (date_range.start || date_range.end)) {
+        const start = date_range.start
+          ? new Date(date_range.start).toISOString()
+          : new Date().toISOString();
+        const end = date_range.end
+          ? new Date(date_range.end).toISOString()
+          : new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+        const params = {
+          startDateTime: start,
+          endDateTime: end,
+          $top: 25,
+          $orderby: "start/dateTime",
+          $select: EVENT_SELECT,
+        };
+        if (query) {
+          return graphGet(
+            token,
+            "/me/calendarView",
+            { ...params, $search: searchPhrase(query) },
+            { ConsistencyLevel: "eventual" },
+          );
+        }
+        return graphGet(token, "/me/calendarView", params);
+      }
+      if (query) {
+        return graphGet(
+          token,
+          "/me/events",
+          { $search: searchPhrase(query), $top: 25, $select: EVENT_SELECT },
+          { ConsistencyLevel: "eventual" },
+        );
+      }
+      return graphGet(token, "/me/events", {
+        $top: 25,
+        $orderby: "start/dateTime",
+        $select: EVENT_SELECT,
+      });
+    }),
+  );
+
+  server.tool(
+    "get_event",
+    "Get full details for a calendar event by id.",
+    { event_id: z.string().describe("The event id.") },
+    runTool(({ event_id }) =>
+      graphGet(token, `/me/events/${odataString(event_id)}`, {
+        $select: EVENT_SELECT + ",body",
+      }),
+    ),
+  );
+
+  server.tool(
+    "create_event",
+    "Create a new calendar event, optionally as a Teams online meeting.",
+    {
+      subject: z.string().describe("Event subject/title."),
+      start: dateTimeSchema,
+      end: dateTimeSchema,
+      body: z
+        .object({
+          content: z.string(),
+          contentType: z.enum(["text", "html"]).optional(),
+        })
+        .optional()
+        .describe("Event description/body."),
+      location: z.string().optional().describe("Location display name."),
+      attendees: z
+        .array(z.string())
+        .optional()
+        .describe("Attendee email addresses."),
+      is_online_meeting: z
+        .boolean()
+        .optional()
+        .describe("Create a Teams online meeting for this event."),
+    },
+    runTool((args) => graphPost(token, "/me/events", buildEvent(args))),
+  );
+
+  server.tool(
+    "update_event",
+    "Update fields on an existing calendar event.",
+    {
+      event_id: z.string().describe("Id of the event to update."),
+      subject: z.string().optional(),
+      start: dateTimeSchema.optional(),
+      end: dateTimeSchema.optional(),
+      body: z
+        .object({
+          content: z.string(),
+          contentType: z.enum(["text", "html"]).optional(),
+        })
+        .optional(),
+      location: z.string().optional(),
+      attendees: z.array(z.string()).optional(),
+    },
+    runTool(({ event_id, ...rest }) =>
+      graphPatch(token, `/me/events/${odataString(event_id)}`, buildEvent(rest)),
+    ),
+  );
+
+  server.tool(
+    "delete_event",
+    "Delete a calendar event by id.",
+    { event_id: z.string().describe("Id of the event to delete.") },
+    runTool(async ({ event_id }) => {
+      await graphDelete(token, `/me/events/${odataString(event_id)}`);
+      return { status: "deleted", event_id };
+    }),
+  );
+
+  server.tool(
+    "accept_event",
+    "Accept a meeting invitation.",
+    {
+      event_id: z.string().describe("Id of the event/invitation."),
+      comment: z.string().optional().describe("Optional response comment."),
+      send_response: z
+        .boolean()
+        .optional()
+        .describe("Send a response to the organizer (default true)."),
+    },
+    runTool(async ({ event_id, comment, send_response }) => {
+      await graphPost(token, `/me/events/${odataString(event_id)}/accept`, {
+        comment: comment || "",
+        sendResponse: send_response ?? true,
+      });
+      return { status: "accepted", event_id };
+    }),
+  );
+
+  server.tool(
+    "decline_event",
+    "Decline a meeting invitation.",
+    {
+      event_id: z.string().describe("Id of the event/invitation."),
+      comment: z.string().optional().describe("Optional response comment."),
+      send_response: z
+        .boolean()
+        .optional()
+        .describe("Send a response to the organizer (default true)."),
+    },
+    runTool(async ({ event_id, comment, send_response }) => {
+      await graphPost(token, `/me/events/${odataString(event_id)}/decline`, {
+        comment: comment || "",
+        sendResponse: send_response ?? true,
+      });
+      return { status: "declined", event_id };
+    }),
+  );
+
+  server.tool(
+    "find_free_slots",
+    "Look up free/busy availability for one or more people over a time window " +
+      "using the calendar getSchedule API.",
+    {
+      schedules: z
+        .array(z.string())
+        .describe("Email addresses to check availability for."),
+      start: dateTimeSchema,
+      end: dateTimeSchema,
+      interval_minutes: z
+        .number()
+        .int()
+        .min(5)
+        .max(1440)
+        .optional()
+        .describe("Availability slot granularity in minutes (default 30)."),
+    },
+    runTool(({ schedules, start, end, interval_minutes }) =>
+      graphPost(token, "/me/calendar/getSchedule", {
+        schedules,
+        startTime: dateTime(start),
+        endTime: dateTime(end),
+        availabilityViewInterval: interval_minutes ?? 30,
+      }),
+    ),
+  );
+
+  server.tool(
+    "list_calendars",
+    "List all calendars owned by or shared with the signed-in user.",
+    {},
+    runTool(() =>
+      graphGet(token, "/me/calendars", {
+        $select: "id,name,owner,canEdit,canShare,isDefaultCalendar,color",
+      }),
+    ),
+  );
+}
