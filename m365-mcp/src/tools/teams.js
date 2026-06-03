@@ -4,7 +4,16 @@
 
 import { z } from "zod";
 import { graphGet, graphPost, microsoftSearch } from "../graph.js";
-import { runTool, odataString } from "./util.js";
+import { runTool, odataString, odataLiteral } from "./util.js";
+
+/** Build an aadUserConversationMember bind for a user UPN/id. */
+function memberBind(userIdOrUpn) {
+  return {
+    "@odata.type": "#microsoft.graph.aadUserConversationMember",
+    roles: ["owner"],
+    "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${odataLiteral(userIdOrUpn)}')`,
+  };
+}
 
 /** Build a Graph chatMessage body resource. */
 function messageBody(content, contentType) {
@@ -100,16 +109,21 @@ export function registerTeamsTools(server, token) {
         .optional()
         .describe("Topic/title for a group chat."),
     },
-    runTool(({ members, chat_type, topic }) => {
+    runTool(async ({ members, chat_type, topic }) => {
       const type = chat_type || (members.length <= 1 ? "oneOnOne" : "group");
-      const body = {
-        chatType: type,
-        members: members.map((upn) => ({
-          "@odata.type": "#microsoft.graph.aadUserConversationMember",
-          roles: ["owner"],
-          "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${upn}')`,
-        })),
-      };
+      // Graph requires the caller to be one of the chat members; add them if
+      // the client didn't include their own address.
+      const me = await graphGet(token, "/me", {
+        $select: "id,userPrincipalName",
+      });
+      const upn = me.userPrincipalName || "";
+      const allMembers = members.some(
+        (m) => m.toLowerCase() === upn.toLowerCase(),
+      )
+        ? members
+        : [...members, me.id];
+
+      const body = { chatType: type, members: allMembers.map(memberBind) };
       if (topic && type === "group") body.topic = topic;
       return graphPost(token, "/chats", body);
     }),
@@ -128,9 +142,7 @@ export function registerTeamsTools(server, token) {
     },
     runTool(({ chat_id, user, share_history }) =>
       graphPost(token, `/chats/${odataString(chat_id)}/members`, {
-        "@odata.type": "#microsoft.graph.aadUserConversationMember",
-        roles: ["owner"],
-        "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${user}')`,
+        ...memberBind(user),
         visibleHistoryStartDateTime: share_history
           ? "0001-01-01T00:00:00Z"
           : undefined,

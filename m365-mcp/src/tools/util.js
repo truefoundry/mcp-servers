@@ -35,6 +35,16 @@ export function odataString(value) {
 }
 
 /**
+ * Escape a value for an OData single-quoted literal by doubling embedded
+ * single quotes — without percent-encoding. Use inside `users('...')`-style
+ * `@odata.bind` URLs, where the surrounding URL is parsed by Graph and normal
+ * UPN characters like `@` must stay literal.
+ */
+export function odataLiteral(value) {
+  return String(value).replace(/'/g, "''");
+}
+
+/**
  * Encode a SharePoint site identifier for use as a URL path segment.
  *
  * Unlike {@link odataString}, this preserves the ':' '/' and ',' that Graph

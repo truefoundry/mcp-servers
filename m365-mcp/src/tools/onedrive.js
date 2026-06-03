@@ -51,6 +51,10 @@ export function registerOneDriveTools(server, token) {
     "Search files in the signed-in user's OneDrive by name or content.",
     { query: z.string().describe("Search term for file names and content.") },
     runTool(({ query }) =>
+      // odataString does both layers correctly: it doubles single quotes for
+      // the OData string literal, then percent-encodes for the URL path (which
+      // Graph decodes before OData parsing). Don't drop the encoding — raw '#',
+      // '?' or '%' in the query would otherwise corrupt the request URL.
       graphGet(token, `/me/drive/root/search(q='${odataString(query)}')`, {
         $top: 25,
         $select: ITEM_SELECT,

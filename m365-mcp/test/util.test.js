@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 
 import {
   odataString,
+  odataLiteral,
   siteId,
   searchPhrase,
   dateRangeKql,
@@ -18,6 +19,11 @@ test("odataString doubles single quotes and percent-encodes", () => {
   assert.equal(odataString("inbox"), "inbox");
   assert.equal(odataString("a'b"), "a''b");
   assert.equal(odataString("a b"), "a%20b");
+});
+
+test("odataLiteral doubles single quotes without percent-encoding", () => {
+  assert.equal(odataLiteral("alice@contoso.com"), "alice@contoso.com");
+  assert.equal(odataLiteral("o'brien@contoso.com"), "o''brien@contoso.com");
 });
 
 test("siteId preserves Graph's structural ':' '/' ',' but escapes spaces", () => {
