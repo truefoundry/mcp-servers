@@ -35,6 +35,19 @@ export function odataString(value) {
 }
 
 /**
+ * Encode a SharePoint site identifier for use as a URL path segment.
+ *
+ * Unlike {@link odataString}, this preserves the ':' '/' and ',' that Graph
+ * uses structurally in the two site-id forms — hostname:path
+ * (e.g. contoso.sharepoint.com:/sites/Team) and the composite
+ * host,siteCollectionId,siteId — while still escaping spaces and other unsafe
+ * characters.
+ */
+export function siteId(value) {
+  return encodeURI(String(value));
+}
+
+/**
  * Quote a value as a Graph `$search` phrase. The expression is wrapped in
  * double quotes, so embedded double quotes would break the query — collapse
  * them to spaces rather than emit malformed KQL.

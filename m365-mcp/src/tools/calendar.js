@@ -56,7 +56,9 @@ function buildEvent({ subject, body, start, end, location, attendees, is_online_
 export function registerCalendarTools(server, token) {
   server.tool(
     "list_events",
-    "List the signed-in user's upcoming calendar events, ordered by start time.",
+    "List the signed-in user's calendar events, ordered by start time " +
+      "(includes past events). To scope to a date window or only future " +
+      "events, use search_events with a date_range.",
     {
       calendar_id: z
         .string()
@@ -90,7 +92,7 @@ export function registerCalendarTools(server, token) {
       query: z.string().optional().describe("Free-text search over events."),
       date_range: dateRangeSchema,
     },
-    runTool(({ query, date_range }) => {
+    runTool(async ({ query, date_range }) => {
       if (date_range && (date_range.start || date_range.end)) {
         const start = date_range.start
           ? new Date(date_range.start).toISOString()
@@ -98,22 +100,29 @@ export function registerCalendarTools(server, token) {
         const end = date_range.end
           ? new Date(date_range.end).toISOString()
           : new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-        const params = {
+        // calendarView expands recurring series across the window but does NOT
+        // support $search, so when a keyword is also supplied we over-fetch and
+        // filter by subject/preview/location in memory.
+        const result = await graphGet(token, "/me/calendarView", {
           startDateTime: start,
           endDateTime: end,
-          $top: 25,
+          $top: query ? 100 : 25,
           $orderby: "start/dateTime",
           $select: EVENT_SELECT,
-        };
-        if (query) {
-          return graphGet(
-            token,
-            "/me/calendarView",
-            { ...params, $search: searchPhrase(query) },
-            { ConsistencyLevel: "eventual" },
-          );
+        });
+        if (query && Array.isArray(result?.value)) {
+          const needle = query.toLowerCase();
+          result.value = result.value
+            .filter((e) =>
+              [e.subject, e.bodyPreview, e.location?.displayName].some(
+                (field) =>
+                  typeof field === "string" &&
+                  field.toLowerCase().includes(needle),
+              ),
+            )
+            .slice(0, 25);
         }
-        return graphGet(token, "/me/calendarView", params);
+        return result;
       }
       if (query) {
         return graphGet(

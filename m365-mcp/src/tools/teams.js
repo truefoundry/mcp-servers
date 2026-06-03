@@ -27,7 +27,8 @@ export function registerTeamsTools(server, token) {
     runTool(({ top }) =>
       graphGet(token, "/me/chats", {
         $top: top ?? 25,
-        $expand: "members",
+        // Graph requires lastMessagePreview to be expanded when ordering by it.
+        $expand: "members,lastMessagePreview",
         $orderby: "lastMessagePreview/createdDateTime desc",
       }),
     ),

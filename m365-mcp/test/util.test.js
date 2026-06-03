@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 
 import {
   odataString,
+  siteId,
   searchPhrase,
   dateRangeKql,
   toRecipients,
@@ -17,6 +18,18 @@ test("odataString doubles single quotes and percent-encodes", () => {
   assert.equal(odataString("inbox"), "inbox");
   assert.equal(odataString("a'b"), "a''b");
   assert.equal(odataString("a b"), "a%20b");
+});
+
+test("siteId preserves Graph's structural ':' '/' ',' but escapes spaces", () => {
+  // hostname:path form — colon and slashes must stay literal.
+  assert.equal(
+    siteId("contoso.sharepoint.com:/sites/Team"),
+    "contoso.sharepoint.com:/sites/Team",
+  );
+  // composite host,siteCollectionId,siteId form — commas must stay literal.
+  assert.equal(siteId("contoso.sharepoint.com,abc,def"), "contoso.sharepoint.com,abc,def");
+  // spaces (e.g. in a path) are still escaped.
+  assert.equal(siteId("host:/sites/Team Site"), "host:/sites/Team%20Site");
 });
 
 test("searchPhrase wraps in quotes and strips embedded quotes", () => {

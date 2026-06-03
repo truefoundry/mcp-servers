@@ -10,7 +10,7 @@ import {
   graphUpload,
   microsoftSearch,
 } from "../graph.js";
-import { runTool, odataString } from "./util.js";
+import { runTool, odataString, siteId } from "./util.js";
 
 export function registerSharePointTools(server, token) {
   server.tool(
@@ -51,7 +51,7 @@ export function registerSharePointTools(server, token) {
         ),
     },
     runTool(({ site_id }) =>
-      graphGet(token, `/sites/${odataString(site_id)}`),
+      graphGet(token, `/sites/${siteId(site_id)}`),
     ),
   );
 
@@ -60,7 +60,7 @@ export function registerSharePointTools(server, token) {
     "List the document libraries (drives) in a SharePoint site.",
     { site_id: z.string().describe("The SharePoint site id.") },
     runTool(({ site_id }) =>
-      graphGet(token, `/sites/${odataString(site_id)}/drives`, {
+      graphGet(token, `/sites/${siteId(site_id)}/drives`, {
         $select: "id,name,webUrl,driveType,quota",
       }),
     ),
@@ -83,7 +83,7 @@ export function registerSharePointTools(server, token) {
     runTool(({ site_id, list_id, top }) =>
       graphGet(
         token,
-        `/sites/${odataString(site_id)}/lists/${odataString(list_id)}/items`,
+        `/sites/${siteId(site_id)}/lists/${odataString(list_id)}/items`,
         { $expand: "fields", $top: top ?? 50 },
       ),
     ),
@@ -100,7 +100,7 @@ export function registerSharePointTools(server, token) {
     runTool(({ site_id, list_id, item_id }) =>
       graphGet(
         token,
-        `/sites/${odataString(site_id)}/lists/${odataString(list_id)}/items/${odataString(item_id)}`,
+        `/sites/${siteId(site_id)}/lists/${odataString(list_id)}/items/${odataString(item_id)}`,
         { $expand: "fields" },
       ),
     ),
@@ -119,7 +119,7 @@ export function registerSharePointTools(server, token) {
     runTool(({ site_id, list_id, fields }) =>
       graphPost(
         token,
-        `/sites/${odataString(site_id)}/lists/${odataString(list_id)}/items`,
+        `/sites/${siteId(site_id)}/lists/${odataString(list_id)}/items`,
         { fields },
       ),
     ),
@@ -139,7 +139,7 @@ export function registerSharePointTools(server, token) {
     runTool(({ site_id, list_id, item_id, fields }) =>
       graphPatch(
         token,
-        `/sites/${odataString(site_id)}/lists/${odataString(list_id)}/items/${odataString(item_id)}/fields`,
+        `/sites/${siteId(site_id)}/lists/${odataString(list_id)}/items/${odataString(item_id)}/fields`,
         fields,
       ),
     ),
@@ -170,7 +170,7 @@ export function registerSharePointTools(server, token) {
       const bytes = Buffer.from(content_base64, "base64");
       const driveBase = drive_id
         ? `/drives/${odataString(drive_id)}`
-        : `/sites/${odataString(site_id)}/drive`;
+        : `/sites/${siteId(site_id)}/drive`;
       const prefix = folder_path
         ? folder_path
             .split("/")
