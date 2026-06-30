@@ -89,15 +89,19 @@ export function registerMailTools(server, token) {
       date_range: dateRangeSchema,
     },
     runTool(({ query, from, date_range }) => {
-      const terms = [query];
-      if (from) terms.push(`from:${from}`);
+      // $search takes a KQL expression. Quote only the free-text query as a
+      // phrase; leave the boolean operator and property restrictions (from:,
+      // received>=/<=) unquoted so Graph parses them as structured KQL instead
+      // of matching the whole string as one literal phrase.
+      const parts = [searchPhrase(query)];
+      if (from) parts.push(`from:${from}`);
       const dates = dateRangeKql("received", date_range);
-      if (dates) terms.push(dates);
-      const kql = terms.filter(Boolean).join(" AND ");
+      if (dates) parts.push(dates);
+      const kql = parts.join(" AND ");
       return graphGet(
         token,
         "/me/messages",
-        { $search: searchPhrase(kql), $top: 25, $select: MESSAGE_SELECT },
+        { $search: kql, $top: 25, $select: MESSAGE_SELECT },
         { ConsistencyLevel: "eventual" },
       );
     }),

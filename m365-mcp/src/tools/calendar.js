@@ -1,3 +1,4 @@
+
 /**
  * Outlook Calendar tools (Microsoft Graph /me/events, /me/calendar*).
  */
@@ -9,7 +10,7 @@ import {
   graphPatch,
   graphDelete,
 } from "../graph.js";
-import { runTool, dateRangeSchema, odataString, searchPhrase } from "./util.js";
+import { runTool, dateRangeSchema, odataString } from "./util.js";
 
 const EVENT_SELECT =
   "id,subject,organizer,start,end,location,bodyPreview,webLink,attendees,isAllDay,isCancelled,onlineMeeting";
@@ -93,16 +94,25 @@ export function registerCalendarTools(server, token) {
       date_range: dateRangeSchema,
     },
     runTool(async ({ query, date_range }) => {
-      if (date_range && (date_range.start || date_range.end)) {
-        const start = date_range.start
+      const hasRange = Boolean(date_range && (date_range.start || date_range.end));
+
+      // The Events resource supports neither $search nor recurring-series
+      // expansion, so every keyword or date-window search runs through
+      // calendarView (which requires an explicit window) and filters keyword
+      // matches by subject/preview/location in memory.
+      if (query || hasRange) {
+        const now = Date.now();
+        // When a range is given, fill the missing side as now .. now+30d.
+        // For a bare keyword search, widen the default window to include the
+        // recent past so existing events are found.
+        const defaultStart = hasRange ? now : now - 30 * 24 * 3600 * 1000;
+        const defaultEnd = now + (hasRange ? 30 : 90) * 24 * 3600 * 1000;
+        const start = date_range?.start
           ? new Date(date_range.start).toISOString()
-          : new Date().toISOString();
-        const end = date_range.end
+          : new Date(defaultStart).toISOString();
+        const end = date_range?.end
           ? new Date(date_range.end).toISOString()
-          : new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-        // calendarView expands recurring series across the window but does NOT
-        // support $search, so when a keyword is also supplied we over-fetch and
-        // filter by subject/preview/location in memory.
+          : new Date(defaultEnd).toISOString();
         const result = await graphGet(token, "/me/calendarView", {
           startDateTime: start,
           endDateTime: end,
@@ -123,14 +133,6 @@ export function registerCalendarTools(server, token) {
             .slice(0, 25);
         }
         return result;
-      }
-      if (query) {
-        return graphGet(
-          token,
-          "/me/events",
-          { $search: searchPhrase(query), $top: 25, $select: EVENT_SELECT },
-          { ConsistencyLevel: "eventual" },
-        );
       }
       return graphGet(token, "/me/events", {
         $top: 25,
@@ -222,10 +224,15 @@ export function registerCalendarTools(server, token) {
         .describe("Send a response to the organizer (default true)."),
     },
     runTool(async ({ event_id, comment, send_response }) => {
-      await graphPost(token, `/me/events/${odataString(event_id)}/accept`, {
-        comment: comment || "",
-        sendResponse: send_response ?? true,
-      });
+      // Graph rejects a non-null comment when sendResponse is false, so only
+      // include the comment when one was actually provided.
+      const payload = { sendResponse: send_response ?? true };
+      if (comment) payload.comment = comment;
+      await graphPost(
+        token,
+        `/me/events/${odataString(event_id)}/accept`,
+        payload,
+      );
       return { status: "accepted", event_id };
     }),
   );
@@ -242,10 +249,15 @@ export function registerCalendarTools(server, token) {
         .describe("Send a response to the organizer (default true)."),
     },
     runTool(async ({ event_id, comment, send_response }) => {
-      await graphPost(token, `/me/events/${odataString(event_id)}/decline`, {
-        comment: comment || "",
-        sendResponse: send_response ?? true,
-      });
+      // Graph rejects a non-null comment when sendResponse is false, so only
+      // include the comment when one was actually provided.
+      const payload = { sendResponse: send_response ?? true };
+      if (comment) payload.comment = comment;
+      await graphPost(
+        token,
+        `/me/events/${odataString(event_id)}/decline`,
+        payload,
+      );
       return { status: "declined", event_id };
     }),
   );
