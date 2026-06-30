@@ -29,7 +29,8 @@ The drive / docs / sheets / slides tool sets are ported verbatim from the upstre
 
 ## Architecture
 
-- **One Node process, 6 MCP endpoints.** Each `POST /mcp/<service>` request opens a session bound to a `StreamableHTTPServerTransport`, and the underlying MCP `Server` is created via `createMcpServer({ services: ['<service>'] })` so `tools/list` only returns that one service's tools.
+- **One Node process, 6 MCP endpoints.** Each `POST /mcp/<service>` request gets a fresh `StreamableHTTPServerTransport` and MCP `Server` instance via `createMcpServer({ services: ['<service>'] })`, so `tools/list` only returns that one service's tools.
+- **Stateless HTTP transport.** Transports are created with `sessionIdGenerator: undefined` (MCP SDK stateless mode). There is no in-memory session map, no `mcp-session-id` header handling, and no GET/DELETE session lifecycle routes — any pod replica can serve any request, which enables horizontal scaling without sticky sessions.
 - **Per-request OAuth (multi-tenant).** Every request must carry the end-user's Google access token in `Authorization: Bearer …`. The TFY Gateway runs the OAuth dance with Google and forwards the token. The server has no local OAuth flow, no on-disk token storage, no service-account fallback — credentials live in the gateway.
 - **Tool annotations.** Every `ToolDefinition` carries an explicit `annotations` object (see [Tool annotations](#tool-annotations)). The fields are hardcoded next to each tool so the wire shape is reviewable in the source.
 
@@ -53,7 +54,7 @@ src/
     calendar/             # index.ts + tools.ts + schemas.ts + helpers/
     gmail/                # index.ts + tools.ts + schemas.ts + helpers/
   transports/
-    http.ts               # Express app with 6 mounted MCP routes + /health
+    http.ts               # Express app, stateless POST-only MCP routes + /health
 Dockerfile
 deploy.py                 # TrueFoundry LocalSource(local_build=False) deploy
 ```
@@ -128,7 +129,7 @@ npm run start -- --port 3000 --host 127.0.0.1
 # In another shell, smoke-test:
 curl -s http://127.0.0.1:3000/health
 
-# Initialize an MCP session against one endpoint (header is required):
+# Smoke-test one endpoint (header is required; each POST is independent):
 curl -s -X POST http://127.0.0.1:3000/mcp/drive \
   -H "Authorization: Bearer <google-access-token>" \
   -H "Content-Type: application/json" \

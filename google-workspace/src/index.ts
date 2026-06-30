@@ -89,6 +89,7 @@ HTTP endpoints:
   /mcp/sheets       Google Sheets tools
   /mcp/slides       Google Slides tools
   /mcp/calendar     Google Calendar tools
+  /mcp/gmail        Gmail tools
 
 Authentication:
   Each request must carry an Authorization: Bearer <google-access-token>
