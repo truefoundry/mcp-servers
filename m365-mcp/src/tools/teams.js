@@ -112,16 +112,32 @@ export function registerTeamsTools(server, token) {
     runTool(async ({ members, chat_type, topic }) => {
       const type = chat_type || (members.length <= 1 ? "oneOnOne" : "group");
       // Graph requires the caller to be one of the chat members; add them if
-      // the client didn't include their own address.
+      // the client didn't include their own address. The client may identify
+      // the caller by either UPN or Graph object id, so check both — matching
+      // only the UPN would append a duplicate when the caller's id was passed.
       const me = await graphGet(token, "/me", {
         $select: "id,userPrincipalName",
       });
-      const upn = me.userPrincipalName || "";
-      const allMembers = members.some(
-        (m) => m.toLowerCase() === upn.toLowerCase(),
-      )
+      const selfKeys = new Set(
+        [me.userPrincipalName, me.id]
+          .filter(Boolean)
+          .map((v) => v.toLowerCase()),
+      );
+      const allMembers = members.some((m) => selfKeys.has(m.toLowerCase()))
         ? members
         : [...members, me.id];
+
+      // Graph requires a oneOnOne chat to have exactly two members (the caller
+      // plus one other). An empty/self-only members list or three-plus members
+      // would otherwise fail or behave incorrectly at Graph, so reject it early
+      // with a hint to use a group chat instead.
+      if (type === "oneOnOne" && allMembers.length !== 2) {
+        throw new Error(
+          `A oneOnOne chat needs exactly two members (you + one other), but ` +
+            `resolved to ${allMembers.length}. Provide exactly one other ` +
+            `member, or set chat_type to "group".`,
+        );
+      }
 
       const body = { chatType: type, members: allMembers.map(memberBind) };
       if (topic && type === "group") body.topic = topic;
