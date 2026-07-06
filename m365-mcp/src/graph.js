@@ -245,7 +245,7 @@ export async function graphDownload(token, path) {
     throw new GraphError(res.status, detail);
   }
 
-  // Reject oversized files before buffering them into memory.
+  // Fast path: reject when the server declares an oversize length up front.
   const declared = Number(res.headers.get("content-length"));
   if (declared && declared > MAX_TRANSFER_BYTES) {
     throw new GraphError(
@@ -255,13 +255,34 @@ export async function graphDownload(token, path) {
     );
   }
 
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.length > MAX_TRANSFER_BYTES) {
-    throw new GraphError(
-      413,
-      `File is ${buf.length} bytes, over the ${MAX_TRANSFER_BYTES}-byte download limit.`,
-    );
+  // Don't trust Content-Length alone — storage redirects often omit or
+  // misreport it. Stream the body and enforce the cap as bytes arrive so an
+  // oversize download can't be fully buffered into memory before the check.
+  const chunks = [];
+  let total = 0;
+  if (res.body) {
+    const reader = res.body.getReader();
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.length;
+        if (total > MAX_TRANSFER_BYTES) {
+          throw new GraphError(
+            413,
+            `File exceeds the ${MAX_TRANSFER_BYTES}-byte download limit. ` +
+              "Use a Graph download session for large files.",
+          );
+        }
+        chunks.push(Buffer.from(value));
+      }
+    } finally {
+      // Release the connection if we stopped early (e.g. hit the cap).
+      await reader.cancel().catch(() => {});
+    }
   }
+
+  const buf = Buffer.concat(chunks);
   return {
     contentType: res.headers.get("content-type") || "application/octet-stream",
     sizeBytes: buf.length,
