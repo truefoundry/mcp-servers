@@ -1,0 +1,20 @@
+{
+  "name": "m365-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server exposing Microsoft 365 (Graph API) search tools over Streamable HTTP with Bearer token pass-through.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "express": "^4.21.2",
+    "zod": "^3.24.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
