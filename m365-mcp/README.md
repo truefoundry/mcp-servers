@@ -67,6 +67,7 @@ malformed headers return JSON-RPC error `-32001` with HTTP 401.
 | `list_chats` | List the user's chats |
 | `search_chat_messages` | Search across chat messages |
 | `get_chat_messages` | Get messages from a chat |
+| `get_chat_message_hosted_content` | Download an image embedded in a chat message |
 | `send_chat_message` | Post a message to a chat |
 | `create_chat` | Create a new chat |
 | `add_chat_member` | Add a member to a chat |
