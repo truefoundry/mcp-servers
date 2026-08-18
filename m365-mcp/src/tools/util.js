@@ -11,14 +11,31 @@ export function ok(data) {
   return { content: [{ type: "text", text }] };
 }
 
+/** Build an MCP image result from a bounded Graph download. */
+export function image(data) {
+  const mimeType = String(data?.contentType || "")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (!mimeType.startsWith("image/")) {
+    throw new GraphError(
+      415,
+      `Expected image content, but Graph returned ${mimeType || "an unknown content type"}.`,
+    );
+  }
+  return {
+    content: [{ type: "image", data: data.base64, mimeType }],
+  };
+}
+
 /**
  * Wrap an async tool handler so Graph/runtime failures become readable MCP
  * tool errors instead of throwing out of the transport.
  */
-export function runTool(handler) {
+export function runTool(handler, formatter = ok) {
   return async (args) => {
     try {
-      return ok(await handler(args ?? {}));
+      return formatter(await handler(args ?? {}));
     } catch (err) {
       const message =
         err instanceof GraphError
