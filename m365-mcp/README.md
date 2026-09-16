@@ -33,6 +33,11 @@ malformed headers return JSON-RPC error `-32001` with HTTP 401.
 
 ## Tools
 
+### 👤 User
+| Tool | Description |
+| --- | --- |
+| `get_current_user` | Get the signed-in user's profile (`/me`) |
+
 ### 📧 Outlook Mail
 | Tool | Description |
 | --- | --- |
@@ -104,7 +109,7 @@ malformed headers return JSON-RPC error `-32001` with HTTP 401.
 ## Required Graph scopes
 
 Grant the access token the delegated scopes for the surfaces you use, e.g.
-`Mail.ReadWrite`, `Mail.Send`, `Calendars.ReadWrite`, `Chat.ReadWrite`,
+`User.Read`, `Mail.ReadWrite`, `Mail.Send`, `Calendars.ReadWrite`, `Chat.ReadWrite`,
 `ChannelMessage.Read.All`/`Send`, `Files.ReadWrite.All`, `Sites.ReadWrite.All`.
 
 ## Project layout
@@ -116,6 +121,7 @@ src/
   tools/
     index.js          Registers every service module
     util.js           Shared MCP helpers and zod schemas
+    user.js           Signed-in user tools
     mail.js           Outlook Mail tools
     calendar.js       Outlook Calendar tools
     teams.js          Microsoft Teams tools
