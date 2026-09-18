@@ -3,8 +3,8 @@
  */
 
 import { z } from "zod";
-import { graphGet, graphPost, microsoftSearch } from "../graph.js";
-import { runTool, odataString, odataLiteral } from "./util.js";
+import { graphDownload, graphGet, graphPost, microsoftSearch } from "../graph.js";
+import { image, runTool, odataString, odataLiteral } from "./util.js";
 
 /** Build an aadUserConversationMember bind for a user UPN/id. */
 function memberBind(userIdOrUpn) {
@@ -69,6 +69,28 @@ export function registerTeamsTools(server, token) {
         $top: top ?? 25,
         $orderby: "createdDateTime desc",
       }),
+    ),
+  );
+
+  server.tool(
+    "get_chat_message_hosted_content",
+    "Download an image embedded in a Teams chat message. Use the hosted " +
+      "content id from the message body's image source.",
+    {
+      chat_id: z.string().describe("The chat id."),
+      message_id: z.string().describe("The chat message id."),
+      hosted_content_id: z
+        .string()
+        .describe("The hosted content id from the message body's image source."),
+    },
+    runTool(
+      ({ chat_id, message_id, hosted_content_id }) =>
+        graphDownload(
+          token,
+          `/chats/${odataString(chat_id)}/messages/${odataString(message_id)}` +
+            `/hostedContents/${odataString(hosted_content_id)}/$value`,
+        ),
+      image,
     ),
   );
 
