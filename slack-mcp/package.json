@@ -21,7 +21,7 @@
     ]
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "~1.11.1",
+    "@modelcontextprotocol/sdk": "~1.26.0",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/microservices": "^11.1.0",
